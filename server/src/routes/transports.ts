@@ -54,20 +54,20 @@ router.patch('/:match_id', requireAuth, requireVerifiedHospital, async (req: Aut
     const nextStatus = String(status).toUpperCase() as TransportStatus;
     updateData.status = nextStatus;
 
-    if (nextStatus === TransportStatus.DISPATCHED) {
+    if (nextStatus === 'DISPATCHED') {
       updateData.dispatched_at = new Date();
       updateData.gps_speed_kmh = 65;
-    } else if (nextStatus === TransportStatus.IN_TRANSIT) {
+    } else if (nextStatus === 'IN_TRANSIT') {
       updateData.in_transit_at = new Date();
       updateData.gps_speed_kmh = 80;
-    } else if (nextStatus === TransportStatus.DELIVERED) {
+    } else if (nextStatus === 'DELIVERED') {
       updateData.delivered_at = new Date();
       updateData.gps_speed_kmh = 0;
       updateData.eta_minutes = 0;
 
-      await prisma.match.update({ where: { id: match_id }, data: { status: MatchStatus.COMPLETED } });
-      await prisma.organ.update({ where: { id: transport.match.organ_id }, data: { status: OrganStatus.COMPLETED } });
-      await prisma.recipient.update({ where: { id: transport.match.recipient_id }, data: { status: RecipientStatus.COMPLETED } });
+      await prisma.match.update({ where: { id: match_id }, data: { status: 'COMPLETED' as MatchStatus } });
+      await prisma.organ.update({ where: { id: transport.match.organ_id }, data: { status: 'COMPLETED' as OrganStatus } });
+      await prisma.recipient.update({ where: { id: transport.match.recipient_id }, data: { status: 'COMPLETED' as RecipientStatus } });
     }
   }
 

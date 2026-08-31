@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db.js';
 import { requireAuth, AuthenticatedRequest, requireRole } from '../middleware/auth.js';
-import { UserRole, HospitalStatus } from '@prisma/client';
+import { HospitalStatus, UserRole } from '@prisma/client';
 
 const router = Router();
 
@@ -19,13 +19,13 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
     return;
   }
 
-  const existingReg = await prisma.hospital.findUnique({ where: { registration_number } });
+  const existingReg = await prisma.hospital.findUnique({ where: { registration_number: String(registration_number) } });
   if (existingReg) {
     res.status(409).json({ success: false, code: 'CONFLICT', error: 'A hospital with this registration number already exists.' });
     return;
   }
 
-  const existingEmail = await prisma.hospital.findUnique({ where: { contact_email } });
+  const existingEmail = await prisma.hospital.findUnique({ where: { contact_email: String(contact_email) } });
   if (existingEmail) {
     res.status(409).json({ success: false, code: 'CONFLICT', error: 'A hospital with this contact email already exists.' });
     return;
@@ -39,7 +39,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
 
   const adminPasswordHash = await bcrypt.hash(String(admin_password), 10);
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: any) => {
     const hospital = await tx.hospital.create({
       data: {
         name: String(hospital_name),
@@ -52,7 +52,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
         contact_phone: contact_phone ? String(contact_phone) : null,
         latitude: latitude ? parseFloat(String(latitude)) : null,
         longitude: longitude ? parseFloat(String(longitude)) : null,
-        status: HospitalStatus.PENDING,
+        status: 'PENDING' as HospitalStatus,
       },
     });
 
@@ -61,7 +61,7 @@ router.post('/', async (req: AuthenticatedRequest, res: Response): Promise<void>
         email: String(admin_email).toLowerCase().trim(),
         password_hash: adminPasswordHash,
         full_name: String(admin_full_name),
-        role: UserRole.HOSPITAL_ADMIN,
+        role: 'HOSPITAL_ADMIN' as UserRole,
         hospital_id: hospital.id,
       },
     });
@@ -98,7 +98,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response): P
     return;
   }
 
-  if (req.user.role === UserRole.ADMIN) {
+  if (req.user.role === 'ADMIN') {
     const statusParam = req.query.status as string;
     const whereClause: any = {};
     if (statusParam && ['PENDING', 'VERIFIED', 'REJECTED'].includes(statusParam.toUpperCase())) {
@@ -126,7 +126,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response): P
 router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
 
-  if (req.user?.role !== UserRole.ADMIN && req.user?.hospital_id !== id) {
+  if (req.user?.role !== 'ADMIN' && req.user?.hospital_id !== id) {
     res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'You can only view your own hospital.' });
     return;
   }
@@ -141,7 +141,7 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response)
 });
 
 // ── PATCH /api/hospitals/:id/approve (ADMIN Only) ───────────────────
-router.patch('/:id/approve', requireAuth, requireRole(UserRole.ADMIN), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.patch('/:id/approve', requireAuth, requireRole('ADMIN'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   const hospital = await prisma.hospital.findUnique({ where: { id } });
 
@@ -150,15 +150,15 @@ router.patch('/:id/approve', requireAuth, requireRole(UserRole.ADMIN), async (re
     return;
   }
 
-  if (hospital.status !== HospitalStatus.PENDING) {
+  if (hospital.status !== 'PENDING') {
     res.status(409).json({ success: false, code: 'INVALID_TRANSITION', error: `Cannot approve hospital in '${hospital.status}' state.` });
     return;
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx: any) => {
     const h = await tx.hospital.update({
       where: { id },
-      data: { status: HospitalStatus.VERIFIED },
+      data: { status: 'VERIFIED' as HospitalStatus },
     });
 
     await tx.notification.create({
@@ -189,7 +189,7 @@ router.patch('/:id/approve', requireAuth, requireRole(UserRole.ADMIN), async (re
 });
 
 // ── PATCH /api/hospitals/:id/reject (ADMIN Only) ────────────────────
-router.patch('/:id/reject', requireAuth, requireRole(UserRole.ADMIN), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.patch('/:id/reject', requireAuth, requireRole('ADMIN'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const id = String(req.params.id);
   const { reason } = req.body || {};
 
@@ -199,16 +199,16 @@ router.patch('/:id/reject', requireAuth, requireRole(UserRole.ADMIN), async (req
     return;
   }
 
-  if (hospital.status !== HospitalStatus.PENDING) {
+  if (hospital.status !== 'PENDING') {
     res.status(409).json({ success: false, code: 'INVALID_TRANSITION', error: `Cannot reject hospital in '${hospital.status}' state.` });
     return;
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx: any) => {
     const h = await tx.hospital.update({
       where: { id },
       data: {
-        status: HospitalStatus.REJECTED,
+        status: 'REJECTED' as HospitalStatus,
         rejection_reason: reason ? String(reason) : 'Failed accreditation check.',
       },
     });

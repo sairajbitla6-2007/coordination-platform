@@ -1,7 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
 import { prisma } from '../db.js';
-import { User, Hospital, UserRole } from '@prisma/client';
+import { User, Hospital, Prisma } from '@prisma/client';
+
+export type UserRole = 'ADMIN' | 'HOSPITAL_ADMIN' | 'TRANSPLANT_COORDINATOR' | 'TRANSPORT_OPERATOR';
 
 export interface AuthenticatedRequest extends Request {
   user?: User & { hospital?: Hospital | null };
@@ -50,7 +52,7 @@ export function requireRole(...allowedRoles: UserRole[]) {
       return;
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    if (!allowedRoles.includes(req.user.role as UserRole)) {
       res.status(403).json({ success: false, code: 'FORBIDDEN', error: `Role '${req.user.role}' is not permitted to perform this action.` });
       return;
     }
@@ -65,7 +67,7 @@ export function requireVerifiedHospital(req: AuthenticatedRequest, res: Response
     return;
   }
 
-  if (req.user.role === UserRole.ADMIN) {
+  if (req.user.role === 'ADMIN') {
     next();
     return;
   }

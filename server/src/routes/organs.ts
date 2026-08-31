@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, AuthenticatedRequest, requireVerifiedHospital } from '../middleware/auth.js';
-import { OrganType, BloodGroup, OrganStatus, UserRole } from '@prisma/client';
+import { OrganType, BloodGroup, OrganStatus } from '@prisma/client';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ router.post('/', requireAuth, requireVerifiedHospital, async (req: Authenticated
   }
 
   const hospitalId = req.user?.hospital_id;
-  if (!hospitalId && req.user?.role !== UserRole.ADMIN) {
+  if (!hospitalId && req.user?.role !== 'ADMIN') {
     res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'Admin must specify hospital_id.' });
     return;
   }
@@ -41,7 +41,7 @@ router.post('/', requireAuth, requireVerifiedHospital, async (req: Authenticated
       notes: notes ? String(notes) : null,
       cause_of_death: cause_of_death ? String(cause_of_death) : null,
       viability_deadline: deadline,
-      status: OrganStatus.AVAILABLE,
+      status: 'AVAILABLE' as OrganStatus,
     },
     include: { hospital: true },
   });
@@ -55,12 +55,12 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response): P
 
   const whereClause: any = {};
 
-  if (req.user?.role !== UserRole.ADMIN) {
+  if (req.user?.role !== 'ADMIN') {
     whereClause.hospital_id = req.user?.hospital_id || undefined;
   }
 
   if (available_only === 'true') {
-    whereClause.status = OrganStatus.AVAILABLE;
+    whereClause.status = 'AVAILABLE' as OrganStatus;
     whereClause.viability_deadline = { gt: new Date() };
   } else if (status) {
     whereClause.status = String(status).toUpperCase() as OrganStatus;
@@ -83,7 +83,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response): P
 router.get('/available', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const organs = await prisma.organ.findMany({
     where: {
-      status: OrganStatus.AVAILABLE,
+      status: 'AVAILABLE' as OrganStatus,
       viability_deadline: { gt: new Date() },
     },
     include: { hospital: true },
@@ -106,7 +106,7 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response)
     return;
   }
 
-  if (req.user?.role !== UserRole.ADMIN && req.user?.hospital_id !== organ.hospital_id) {
+  if (req.user?.role !== 'ADMIN' && req.user?.hospital_id !== organ.hospital_id) {
     res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'You can only view your own hospital organs.' });
     return;
   }
@@ -125,7 +125,7 @@ router.patch('/:id', requireAuth, requireVerifiedHospital, async (req: Authentic
     return;
   }
 
-  if (req.user?.role !== UserRole.ADMIN && req.user?.hospital_id !== organ.hospital_id) {
+  if (req.user?.role !== 'ADMIN' && req.user?.hospital_id !== organ.hospital_id) {
     res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'You do not own this organ listing.' });
     return;
   }

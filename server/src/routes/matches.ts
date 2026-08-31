@@ -2,7 +2,7 @@ import { Router, Response } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, AuthenticatedRequest, requireVerifiedHospital } from '../middleware/auth.js';
 import { calculateMatchScore } from '../services/matchingEngine.js';
-import { MatchStatus, OrganStatus, RecipientStatus, TransportStatus, UserRole } from '@prisma/client';
+import { MatchStatus, OrganStatus, RecipientStatus, TransportStatus } from '@prisma/client';
 
 const router = Router();
 
@@ -20,12 +20,12 @@ router.get('/candidates/organ/:organ_id', requireAuth, async (req: Authenticated
     return;
   }
 
-  if (req.user?.role !== UserRole.ADMIN && req.user?.hospital_id !== organ.hospital_id) {
+  if (req.user?.role !== 'ADMIN' && req.user?.hospital_id !== organ.hospital_id) {
     res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'You can only run match engine for your own hospital organs.' });
     return;
   }
 
-  if (organ.status !== OrganStatus.AVAILABLE) {
+  if (organ.status !== 'AVAILABLE') {
     res.status(400).json({ success: false, code: 'ORGAN_NOT_AVAILABLE', error: `Organ status is '${organ.status}'. Matching requires AVAILABLE status.` });
     return;
   }
@@ -33,7 +33,7 @@ router.get('/candidates/organ/:organ_id', requireAuth, async (req: Authenticated
   const recipients = await prisma.recipient.findMany({
     where: {
       organ_needed: organ.organ_type,
-      status: RecipientStatus.ACTIVE,
+      status: 'ACTIVE' as RecipientStatus,
     },
     include: { hospital: true },
   });
@@ -99,7 +99,7 @@ router.get('/candidates/recipient/:recipient_id', requireAuth, async (req: Authe
   const organs = await prisma.organ.findMany({
     where: {
       organ_type: recipient.organ_needed,
-      status: OrganStatus.AVAILABLE,
+      status: 'AVAILABLE' as OrganStatus,
       viability_deadline: { gt: new Date() },
     },
     include: { hospital: true },
@@ -187,7 +187,7 @@ router.post('/propose', requireAuth, requireVerifiedHospital, async (req: Authen
 
   const respondBy = new Date(Date.now() + 45 * 60 * 1000);
 
-  const match = await prisma.$transaction(async (tx) => {
+  const match = await prisma.$transaction(async (tx: any) => {
     const m = await tx.match.create({
       data: {
         organ_id: String(organ_id),
@@ -196,7 +196,7 @@ router.post('/propose', requireAuth, requireVerifiedHospital, async (req: Authen
         distance_km: scoreResult.distanceKm,
         transit_time_minutes: scoreResult.transitMinutes,
         score_breakdown: scoreResult.breakdown as any,
-        status: MatchStatus.PROPOSED,
+        status: 'PROPOSED' as MatchStatus,
         proposed_at: new Date(),
         respond_by: respondBy,
       },
@@ -239,16 +239,16 @@ router.patch('/:id/accept', requireAuth, requireVerifiedHospital, async (req: Au
     return;
   }
 
-  if (match.status !== MatchStatus.PROPOSED) {
+  if (match.status !== 'PROPOSED') {
     res.status(409).json({ success: false, code: 'INVALID_TRANSITION', error: `Match status is '${match.status}'. Cannot accept.` });
     return;
   }
 
-  const result = await prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx: any) => {
     const updatedMatch = await tx.match.update({
       where: { id },
       data: {
-        status: MatchStatus.CONFIRMED,
+        status: 'CONFIRMED' as MatchStatus,
         responded_at: new Date(),
       },
       include: {
@@ -257,13 +257,13 @@ router.patch('/:id/accept', requireAuth, requireVerifiedHospital, async (req: Au
       },
     });
 
-    await tx.organ.update({ where: { id: match.organ_id }, data: { status: OrganStatus.MATCHED } });
-    await tx.recipient.update({ where: { id: match.recipient_id }, data: { status: RecipientStatus.MATCHED } });
+    await tx.organ.update({ where: { id: match.organ_id }, data: { status: 'MATCHED' as OrganStatus } });
+    await tx.recipient.update({ where: { id: match.recipient_id }, data: { status: 'MATCHED' as RecipientStatus } });
 
     const transport = await tx.transport.create({
       data: {
         match_id: id,
-        status: TransportStatus.PENDING,
+        status: 'PENDING' as TransportStatus,
         preservation_box_id: `LIFELINK-BOX-${Math.floor(100 + Math.random() * 900)}`,
         current_temp_celsius: 3.6,
         battery_level: 95,
@@ -322,18 +322,18 @@ router.patch('/:id/reject', requireAuth, requireVerifiedHospital, async (req: Au
     return;
   }
 
-  const updated = await prisma.$transaction(async (tx) => {
+  const updated = await prisma.$transaction(async (tx: any) => {
     const m = await tx.match.update({
       where: { id },
       data: {
-        status: MatchStatus.REJECTED,
+        status: 'REJECTED' as MatchStatus,
         responded_at: new Date(),
         rejection_reason: reason ? String(reason) : 'Declined by recipient clinical team.',
       },
     });
 
-    await tx.organ.update({ where: { id: match.organ_id }, data: { status: OrganStatus.AVAILABLE } });
-    await tx.recipient.update({ where: { id: match.recipient_id }, data: { status: RecipientStatus.ACTIVE } });
+    await tx.organ.update({ where: { id: match.organ_id }, data: { status: 'AVAILABLE' as OrganStatus } });
+    await tx.recipient.update({ where: { id: match.recipient_id }, data: { status: 'ACTIVE' as RecipientStatus } });
 
     return m;
   });

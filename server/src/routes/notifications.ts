@@ -1,7 +1,6 @@
 import { Router, Response } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, AuthenticatedRequest } from '../middleware/auth.js';
-import { UserRole } from '@prisma/client';
 
 const router = Router();
 
@@ -11,7 +10,7 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response): P
 
   const whereClause: any = {};
 
-  if (req.user?.role !== UserRole.ADMIN) {
+  if (req.user?.role !== 'ADMIN') {
     if (!req.user?.hospital_id) {
       res.json({ success: true, data: [], message: 'No hospital associated with user.' });
       return;
@@ -41,7 +40,7 @@ router.patch('/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Re
     return;
   }
 
-  if (req.user?.role !== UserRole.ADMIN && notif.hospital_id !== req.user?.hospital_id) {
+  if (req.user?.role !== 'ADMIN' && notif.hospital_id !== req.user?.hospital_id) {
     res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'Notification belongs to another hospital.' });
     return;
   }
@@ -58,7 +57,7 @@ router.patch('/:id/read', requireAuth, async (req: AuthenticatedRequest, res: Re
 router.patch('/read-all', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const whereClause: any = { is_read: false };
 
-  if (req.user?.role !== UserRole.ADMIN) {
+  if (req.user?.role !== 'ADMIN') {
     if (!req.user?.hospital_id) {
       res.json({ success: true, data: { count: 0 } });
       return;

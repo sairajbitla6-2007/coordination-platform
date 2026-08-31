@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, AuthenticatedRequest, requireVerifiedHospital } from '../middleware/auth.js';
-import { OrganType, BloodGroup, UrgencyLevel, RecipientStatus, UserRole } from '@prisma/client';
+import { OrganType, BloodGroup, UrgencyLevel, RecipientStatus } from '@prisma/client';
 
 const router = Router();
 
@@ -18,7 +18,7 @@ router.post('/', requireAuth, requireVerifiedHospital, async (req: Authenticated
   }
 
   const hospitalId = req.user?.hospital_id;
-  if (!hospitalId && req.user?.role !== UserRole.ADMIN) {
+  if (!hospitalId && req.user?.role !== 'ADMIN') {
     res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'Admin must specify hospital_id.' });
     return;
   }
@@ -38,7 +38,7 @@ router.post('/', requireAuth, requireVerifiedHospital, async (req: Authenticated
       gender: gender ? String(gender) : null,
       ward: ward ? String(ward) : null,
       registered_at: new Date(),
-      status: RecipientStatus.ACTIVE,
+      status: 'ACTIVE' as RecipientStatus,
     },
     include: { hospital: true },
   });
@@ -52,14 +52,14 @@ router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response): P
 
   const whereClause: any = {};
 
-  if (req.user?.role !== UserRole.ADMIN) {
+  if (req.user?.role !== 'ADMIN') {
     whereClause.hospital_id = req.user?.hospital_id || undefined;
   }
 
   if (status) {
     whereClause.status = String(status).toUpperCase() as RecipientStatus;
   } else {
-    whereClause.status = RecipientStatus.ACTIVE;
+    whereClause.status = 'ACTIVE' as RecipientStatus;
   }
 
   if (urgency_level) {
@@ -92,7 +92,7 @@ router.get('/:id', requireAuth, async (req: AuthenticatedRequest, res: Response)
     return;
   }
 
-  if (req.user?.role !== UserRole.ADMIN && req.user?.hospital_id !== recipient.hospital_id) {
+  if (req.user?.role !== 'ADMIN' && req.user?.hospital_id !== recipient.hospital_id) {
     res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'You can only view your own hospital recipients.' });
     return;
   }
@@ -111,7 +111,7 @@ router.patch('/:id', requireAuth, requireVerifiedHospital, async (req: Authentic
     return;
   }
 
-  if (req.user?.role !== UserRole.ADMIN && req.user?.hospital_id !== recipient.hospital_id) {
+  if (req.user?.role !== 'ADMIN' && req.user?.hospital_id !== recipient.hospital_id) {
     res.status(403).json({ success: false, code: 'FORBIDDEN', error: 'You do not own this recipient entry.' });
     return;
   }

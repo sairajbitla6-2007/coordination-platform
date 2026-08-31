@@ -3,12 +3,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { prisma } from '../db.js';
-import { requireAuth, AuthenticatedRequest, requireRole } from '../middleware/auth.js';
-import { UserRole } from '@prisma/client';
+import { requireAuth, AuthenticatedRequest, requireRole, UserRole } from '../middleware/auth.js';
 
 const router = Router();
 const JWT_SECRET = process.env.JWT_SECRET || 'organlink_jwt_super_secret_key_2026_dev';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '24h';
 
 const ALLOWED_PREF_KEYS = ['urgent_alerts', 'sound_alerts', 'digest'];
 
@@ -21,7 +19,7 @@ router.post('/login', async (req: AuthenticatedRequest, res: Response): Promise<
   }
 
   const user = await prisma.user.findUnique({
-    where: { email: email.toLowerCase().trim() },
+    where: { email: String(email).toLowerCase().trim() },
     include: { hospital: true },
   });
 
@@ -30,14 +28,14 @@ router.post('/login', async (req: AuthenticatedRequest, res: Response): Promise<
     return;
   }
 
-  const passwordValid = await bcrypt.compare(password, user.password_hash);
+  const passwordValid = await bcrypt.compare(String(password), user.password_hash);
   if (!passwordValid) {
     res.status(401).json({ success: false, code: 'AUTH_FAILED', error: 'Invalid email or password.' });
     return;
   }
 
   // If user belongs to hospital, verify status
-  if (user.role !== UserRole.ADMIN && user.hospital) {
+  if (user.role !== 'ADMIN' && user.hospital) {
     if (user.hospital.status === 'PENDING') {
       res.status(403).json({ success: false, code: 'HOSPITAL_PENDING', error: 'Your hospital registration is pending admin approval.' });
       return;
@@ -74,7 +72,7 @@ router.get('/me', requireAuth, async (req: AuthenticatedRequest, res: Response):
 });
 
 // ── POST /api/auth/register (Staff Creation) ─────────────────────
-router.post('/register', requireAuth, requireRole(UserRole.HOSPITAL_ADMIN), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+router.post('/register', requireAuth, requireRole('HOSPITAL_ADMIN'), async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   const { email, password, full_name, role } = req.body || {};
 
   if (!email || !password || !full_name || !role) {
@@ -82,18 +80,18 @@ router.post('/register', requireAuth, requireRole(UserRole.HOSPITAL_ADMIN), asyn
     return;
   }
 
-  const existing = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+  const existing = await prisma.user.findUnique({ where: { email: String(email).toLowerCase().trim() } });
   if (existing) {
     res.status(409).json({ success: false, code: 'CONFLICT', error: 'An account with this email already exists.' });
     return;
   }
 
-  const passwordHash = await bcrypt.hash(password, 10);
+  const passwordHash = await bcrypt.hash(String(password), 10);
   const newUser = await prisma.user.create({
     data: {
-      email: email.toLowerCase().trim(),
+      email: String(email).toLowerCase().trim(),
       password_hash: passwordHash,
-      full_name,
+      full_name: String(full_name),
       role: role as UserRole,
       hospital_id: req.user?.hospital_id,
     },
@@ -157,14 +155,14 @@ router.post('/forgot-password', async (req: AuthenticatedRequest, res: Response)
     return;
   }
 
-  const user = await prisma.user.findUnique({ where: { email: email.toLowerCase().trim() } });
+  const user = await prisma.user.findUnique({ where: { email: String(email).toLowerCase().trim() } });
   if (!user || !user.is_active) {
     res.json({ success: true, data: {}, message: 'If that email exists, reset instructions have been issued.' });
     return;
   }
 
   const token = crypto.randomBytes(32).toString('hex');
-  const expiresAt = new Date(Date.now() + 3600 * 1000); // 1 hour
+  const expiresAt = new Date(Date.now() + 3600 * 1000);
 
   await prisma.user.update({
     where: { id: user.id },
@@ -192,14 +190,15 @@ router.post('/reset-password', async (req: AuthenticatedRequest, res: Response):
     return;
   }
 
-  if (new_password.length < 8) {
+  const newPassStr = String(new_password);
+  if (newPassStr.length < 8) {
     res.status(422).json({ success: false, code: 'VALIDATION_ERROR', error: 'Password must be at least 8 characters long.' });
     return;
   }
 
   const user = await prisma.user.findFirst({
     where: {
-      reset_token: token,
+      reset_token: String(token),
       reset_token_expires_at: { gt: new Date() },
     },
   });
@@ -209,7 +208,7 @@ router.post('/reset-password', async (req: AuthenticatedRequest, res: Response):
     return;
   }
 
-  const passwordHash = await bcrypt.hash(new_password, 10);
+  const passwordHash = await bcrypt.hash(newPassStr, 10);
   await prisma.user.update({
     where: { id: user.id },
     data: {
