@@ -1,9 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import Link from 'next/link';
 import { usePlatform } from '@/lib/context/PlatformContext';
 import RoleGuard from '@/components/RoleGuard';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const JWT_KEY = 'organlink_jwt_token';
 
 export default function HospitalProfilePage() {
   const { currentHospital, currentHospitalId, hospitals, setCurrentHospitalId, setCurrentRole, showToast } = usePlatform();
@@ -11,14 +14,81 @@ export default function HospitalProfilePage() {
   const [urgentAlertsEnabled, setUrgentAlertsEnabled] = useState(true);
   const [soundAlertsEnabled, setSoundAlertsEnabled] = useState(true);
   const [digestEnabled, setDigestEnabled] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
-  const handleSavePreferences = () => {
-    showToast({
-      type: 'success',
-      title: 'Preferences Updated',
-      message: 'Critical match telemetry and push alerting thresholds saved.'
-    });
-  };
+  // Load preferences from backend on mount. Falls back silently if no JWT (demo mode).
+  useEffect(() => {
+    const token = localStorage.getItem(JWT_KEY);
+    if (!token) return; // demo mode — leave defaults as-is
+
+    fetch(`${API_BASE}/auth/preferences`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (data?.data?.preferences) {
+          const p = data.data.preferences;
+          setUrgentAlertsEnabled(Boolean(p.urgent_alerts));
+          setSoundAlertsEnabled(Boolean(p.sound_alerts));
+          setDigestEnabled(Boolean(p.digest));
+        }
+      })
+      .catch(() => {/* network error — keep defaults */});
+  }, []);
+
+  const handleSavePreferences = useCallback(async () => {
+    const token = localStorage.getItem(JWT_KEY);
+
+    if (!token) {
+      // Demo / unauthenticated mode — just show success toast (no backend call)
+      showToast({
+        type: 'success',
+        title: 'Preferences Updated (Demo)',
+        message: 'Login via the backend to persist preferences to the database.',
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const res = await fetch(`${API_BASE}/auth/preferences`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          urgent_alerts: urgentAlertsEnabled,
+          sound_alerts: soundAlertsEnabled,
+          digest: digestEnabled,
+        }),
+      });
+
+      if (res.ok) {
+        showToast({
+          type: 'success',
+          title: 'Preferences Saved',
+          message: 'Critical match telemetry and push alerting thresholds saved to database.',
+        });
+      } else {
+        const err = await res.json().catch(() => ({}));
+        showToast({
+          type: 'error',
+          title: 'Save Failed',
+          message: err?.message || 'Could not save preferences. Please try again.',
+        });
+      }
+    } catch {
+      showToast({
+        type: 'error',
+        title: 'Network Error',
+        message: 'Could not reach the backend. Check that Flask is running on port 5000.',
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  }, [urgentAlertsEnabled, soundAlertsEnabled, digestEnabled, showToast]);
+
 
   return (
     <RoleGuard requiredRole="HOSPITAL_USER" requireVerifiedHospital={false}>
@@ -182,9 +252,10 @@ export default function HospitalProfilePage() {
           <div className="pt-2 flex justify-end">
             <button
               onClick={handleSavePreferences}
-              className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-2 px-5 rounded-full shadow-xs transition-all"
+              disabled={isSaving}
+              className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-2 px-5 rounded-full shadow-xs transition-all disabled:opacity-60 disabled:cursor-not-allowed"
             >
-              Save Preferences
+              {isSaving ? 'Saving…' : 'Save Preferences'}
             </button>
           </div>
         </div>

@@ -1,11 +1,33 @@
 'use client';
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import Link from 'next/link';
-import { usePlatform } from '@/lib/context/PlatformContext';
+import { usePlatform, JWT_KEY } from '@/lib/context/PlatformContext';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+// Auto-login seeded demo credentials when switching perspectives
+async function loginAs(email: string, password: string): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    if (!res.ok) return false;
+    const data = await res.json();
+    const token = data?.data?.access_token;
+    if (token) {
+      localStorage.setItem(JWT_KEY, token);
+      return true;
+    }
+  } catch { /* backend offline — demo mode continues */ }
+  return false;
+}
 
 export default function HomePage() {
   const { listings, hospitals, matches, transports, setCurrentRole, setCurrentHospitalId } = usePlatform();
+
 
   const activeDonorCount = listings.filter(l => l.type === 'DONOR' && l.status === 'ACTIVE').length;
   const activeRecipientCount = listings.filter(l => l.type === 'RECIPIENT' && l.status === 'ACTIVE').length;
@@ -53,9 +75,10 @@ export default function HomePage() {
           <div className="flex w-full flex-col sm:flex-row items-center justify-center gap-4">
             <Link
               href="/dashboard"
-              onClick={() => {
+              onClick={async () => {
                 setCurrentRole('HOSPITAL_USER');
                 setCurrentHospitalId('hosp-metro-gen');
+                await loginAs('priya.sharma@metrogeneral.med.in', 'MetroDemo@2024');
               }}
               className="w-full sm:w-auto rounded-full bg-primary hover:bg-primary-container text-on-primary px-8 py-3.5 font-semibold text-sm shadow-md transition-all hover:shadow-lg flex items-center justify-center gap-2"
             >
@@ -71,7 +94,10 @@ export default function HomePage() {
             </Link>
             <Link
               href="/admin/queue"
-              onClick={() => setCurrentRole('ADMIN')}
+              onClick={async () => {
+                setCurrentRole('ADMIN');
+                await loginAs('admin@organlink.demo', 'AdminDemo@2024');
+              }}
               className="w-full sm:w-auto rounded-full bg-tertiary/10 hover:bg-tertiary/20 text-tertiary px-6 py-3.5 font-semibold text-sm transition-all flex items-center justify-center gap-2 border border-tertiary/20"
             >
               <span className="material-symbols-outlined text-[20px]">admin_panel_settings</span>
@@ -139,9 +165,10 @@ export default function HomePage() {
               </div>
               <Link
                 href="/dashboard"
-                onClick={() => {
+                onClick={async () => {
                   setCurrentRole('HOSPITAL_USER');
                   setCurrentHospitalId('hosp-metro-gen');
+                  await loginAs('priya.sharma@metrogeneral.med.in', 'MetroDemo@2024');
                 }}
                 className="w-full bg-primary text-on-primary font-semibold text-xs py-2.5 px-4 rounded-xl text-center flex items-center justify-center gap-1.5 hover:bg-primary-container transition-colors shadow-2xs"
               >
@@ -168,9 +195,10 @@ export default function HomePage() {
               </div>
               <Link
                 href="/requests"
-                onClick={() => {
+                onClick={async () => {
                   setCurrentRole('HOSPITAL_USER');
                   setCurrentHospitalId('hosp-st-jude');
+                  await loginAs('rajiv.menon@stjudeheart.org', 'StJudeDemo@2024');
                 }}
                 className="w-full bg-secondary text-on-secondary font-semibold text-xs py-2.5 px-4 rounded-xl text-center flex items-center justify-center gap-1.5 hover:bg-secondary/90 transition-colors shadow-2xs"
               >
@@ -197,8 +225,9 @@ export default function HomePage() {
               </div>
               <Link
                 href="/admin/queue"
-                onClick={() => {
+                onClick={async () => {
                   setCurrentRole('ADMIN');
+                  await loginAs('admin@organlink.demo', 'AdminDemo@2024');
                 }}
                 className="w-full bg-tertiary text-on-tertiary font-semibold text-xs py-2.5 px-4 rounded-xl text-center flex items-center justify-center gap-1.5 hover:bg-tertiary/90 transition-colors shadow-2xs"
               >
