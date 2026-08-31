@@ -1,0 +1,246 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum HospitalStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum UserRole {
+  ADMIN
+  HOSPITAL_ADMIN
+  TRANSPLANT_COORDINATOR
+  TRANSPORT_OPERATOR
+}
+
+enum OrganType {
+  KIDNEY
+  LIVER
+  HEART
+  LUNG
+  PANCREAS
+  INTESTINE
+  CORNEA
+}
+
+enum BloodGroup {
+  A_POSITIVE
+  A_NEGATIVE
+  B_POSITIVE
+  B_NEGATIVE
+  AB_POSITIVE
+  AB_NEGATIVE
+  O_POSITIVE
+  O_NEGATIVE
+}
+
+enum OrganStatus {
+  AVAILABLE
+  MATCHED
+  COMPLETED
+  EXPIRED
+  WITHDRAWN
+}
+
+enum UrgencyLevel {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum RecipientStatus {
+  ACTIVE
+  MATCHED
+  COMPLETED
+  WITHDRAWN
+}
+
+enum MatchStatus {
+  PROPOSED
+  CONFIRMED
+  REJECTED
+  COMPLETED
+}
+
+enum TransportStatus {
+  PENDING
+  DISPATCHED
+  IN_TRANSIT
+  DELIVERED
+}
+
+model Hospital {
+  id                  String         @id @default(uuid())
+  name                String
+  registration_number String         @unique
+  address             String?
+  city                String?
+  state               String?
+  pincode             String?
+  latitude            Float?
+  longitude           Float?
+  contact_email       String         @unique
+  contact_phone       String?
+  status              HospitalStatus @default(PENDING)
+  rejection_reason    String?
+  created_at          DateTime       @default(now())
+  updated_at          DateTime       @updatedAt
+
+  users         User[]
+  organs        Organ[]
+  recipients    Recipient[]
+  notifications Notification[]
+
+  @@map("hospitals")
+}
+
+model User {
+  id                     String    @id @default(uuid())
+  hospital_id            String?
+  email                  String    @unique
+  password_hash          String
+  full_name              String
+  role                   UserRole
+  is_active              Boolean   @default(true)
+  preferences            Json      @default("{\"urgent_alerts\": true, \"sound_alerts\": true, \"digest\": false}")
+  reset_token            String?
+  reset_token_expires_at DateTime?
+  created_at             DateTime  @default(now())
+  updated_at             DateTime  @updatedAt
+
+  hospital  Hospital?  @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
+  auditLogs AuditLog[]
+
+  @@map("users")
+}
+
+model Organ {
+  id                  String      @id @default(uuid())
+  hospital_id         String
+  donor_ref           String
+  organ_type          OrganType
+  blood_group         BloodGroup
+  hla_typing          Json?
+  cold_ischemia_hours Int         @default(12)
+  donor_age           Int?
+  donor_gender        String?
+  notes               String?
+  cause_of_death      String?
+  viability_deadline  DateTime?
+  status              OrganStatus @default(AVAILABLE)
+  created_at          DateTime    @default(now())
+  updated_at          DateTime    @updatedAt
+
+  hospital Hospital @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
+  matches  Match[]
+
+  @@map("organs")
+}
+
+model Recipient {
+  id            String          @id @default(uuid())
+  hospital_id   String
+  patient_ref   String
+  organ_needed  OrganType
+  blood_group   BloodGroup
+  hla_typing    Json?
+  urgency_level UrgencyLevel    @default(MEDIUM)
+  age           Int?
+  gender        String?
+  ward          String?
+  registered_at DateTime        @default(now())
+  status        RecipientStatus @default(ACTIVE)
+  created_at    DateTime        @default(now())
+  updated_at    DateTime        @updatedAt
+
+  hospital Hospital @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
+  matches  Match[]
+
+  @@map("recipients")
+}
+
+model Match {
+  id                   String      @id @default(uuid())
+  organ_id             String
+  recipient_id         String
+  composite_score      Float
+  distance_km          Float
+  transit_time_minutes Int
+  score_breakdown      Json?
+  status               MatchStatus @default(PROPOSED)
+  proposed_at          DateTime    @default(now())
+  respond_by           DateTime?
+  responded_at         DateTime?
+  rejection_reason     String?
+  created_at           DateTime    @default(now())
+  updated_at           DateTime    @updatedAt
+
+  organ     Organ      @relation(fields: [organ_id], references: [id], onDelete: Cascade)
+  recipient Recipient  @relation(fields: [recipient_id], references: [id], onDelete: Cascade)
+  transport Transport?
+
+  @@map("matches")
+}
+
+model Transport {
+  id                   String          @id @default(uuid())
+  match_id             String          @unique
+  status               TransportStatus @default(PENDING)
+  preservation_box_id  String?
+  current_temp_celsius Float?          @default(3.6)
+  battery_level        Int?            @default(95)
+  gps_speed_kmh        Float?          @default(0)
+  eta_minutes          Int?
+  dispatched_at        DateTime?
+  in_transit_at        DateTime?
+  delivered_at         DateTime?
+  vehicle_type         String?         @default("GREEN_CORRIDOR_AMBULANCE")
+  tracking_number      String?
+  driver_name          String?
+  driver_phone         String?
+  checkpoints          Json?
+  created_at           DateTime        @default(now())
+  updated_at           DateTime        @updatedAt
+
+  match Match @relation(fields: [match_id], references: [id], onDelete: Cascade)
+
+  @@map("transports")
+}
+
+model Notification {
+  id                String   @id @default(uuid())
+  hospital_id       String?
+  title             String
+  message           String
+  notification_type String
+  is_read           Boolean  @default(false)
+  action_url        String?
+  created_at        DateTime @default(now())
+
+  hospital Hospital? @relation(fields: [hospital_id], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+model AuditLog {
+  id            String   @id @default(uuid())
+  actor_id      String?
+  actor_email   String?
+  action        String
+  resource_type String
+  resource_id   String?
+  details       Json?
+  created_at    DateTime @default(now())
+
+  actor User? @relation(fields: [actor_id], references: [id], onDelete: SetNull)
+
+  @@map("audit_logs")
+}
