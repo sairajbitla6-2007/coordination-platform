@@ -2,7 +2,10 @@ import { Router, Response } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, AuthenticatedRequest, requireVerifiedHospital } from '../middleware/auth.js';
 import { calculateMatchScore } from '../services/matchingEngine.js';
-import { MatchStatus, OrganStatus, RecipientStatus, TransportStatus } from '@prisma/client';
+type MatchStatus = 'PROPOSED' | 'CONFIRMED' | 'REJECTED' | 'COMPLETED';
+type OrganStatus = 'AVAILABLE' | 'MATCHED' | 'COMPLETED' | 'EXPIRED' | 'WITHDRAWN';
+type RecipientStatus = 'ACTIVE' | 'MATCHED' | 'COMPLETED' | 'WITHDRAWN';
+type TransportStatus = 'PENDING' | 'DISPATCHED' | 'IN_TRANSIT' | 'DELIVERED';
 
 const router = Router();
 

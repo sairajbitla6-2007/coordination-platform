@@ -1,7 +1,10 @@
 import { Router, Response } from 'express';
 import { prisma } from '../db.js';
 import { requireAuth, AuthenticatedRequest, requireVerifiedHospital } from '../middleware/auth.js';
-import { OrganType, BloodGroup, UrgencyLevel, RecipientStatus } from '@prisma/client';
+type OrganType = 'KIDNEY' | 'LIVER' | 'HEART' | 'LUNG' | 'PANCREAS' | 'INTESTINE' | 'CORNEA';
+type BloodGroup = 'A_POSITIVE' | 'A_NEGATIVE' | 'B_POSITIVE' | 'B_NEGATIVE' | 'AB_POSITIVE' | 'AB_NEGATIVE' | 'O_POSITIVE' | 'O_NEGATIVE';
+type UrgencyLevel = 'CRITICAL' | 'HIGH' | 'MEDIUM' | 'LOW';
+type RecipientStatus = 'ACTIVE' | 'MATCHED' | 'COMPLETED' | 'WITHDRAWN';
 
 const router = Router();
 

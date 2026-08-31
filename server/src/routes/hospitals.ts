@@ -2,7 +2,8 @@ import { Router, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../db.js';
 import { requireAuth, AuthenticatedRequest, requireRole } from '../middleware/auth.js';
-import { HospitalStatus, UserRole } from '@prisma/client';
+type HospitalStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
+type UserRole = 'ADMIN' | 'HOSPITAL_ADMIN' | 'TRANSPLANT_COORDINATOR' | 'TRANSPORT_OPERATOR';
 
 const router = Router();
 
