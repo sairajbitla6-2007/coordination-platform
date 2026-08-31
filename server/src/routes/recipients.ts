@@ -51,12 +51,12 @@ router.post('/', requireAuth, requireVerifiedHospital, async (req: Authenticated
 
 // ── GET /api/recipients ───────────────────────────────────────────
 router.get('/', requireAuth, async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-  const { urgency_level, organ_needed, status } = req.query;
+  const { urgency_level, organ_needed, status, hospital_id } = req.query;
 
   const whereClause: any = {};
 
-  if (req.user?.role !== 'ADMIN') {
-    whereClause.hospital_id = req.user?.hospital_id || undefined;
+  if (hospital_id) {
+    whereClause.hospital_id = String(hospital_id);
   }
 
   if (status) {

@@ -36,18 +36,24 @@ export default function TransportTrackingPage({ params }: { params: Promise<{ ma
   const donor = match.donorListing;
   const recipient = match.recipientListing;
 
-  const currentStepIndex = {
+  const stepMap: Record<string, number> = {
     PENDING: 0,
     DISPATCHED: 1,
     IN_TRANSIT: 2,
     DELIVERED: 3
-  }[transport.status];
+  };
+  const currentStepIndex = stepMap[transport.status] ?? 0;
 
   const handleAdvance = (next: TransportStatus) => {
     setIsUpdating(true);
     setTimeout(() => {
       advanceTransportStatus(transport.matchId, next);
       setIsUpdating(false);
+      if (next === 'DELIVERED') {
+        setTimeout(() => {
+          router.push('/history');
+        }, 1200);
+      }
     }, 400);
   };
 
