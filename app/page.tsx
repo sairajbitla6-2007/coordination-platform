@@ -89,6 +89,7 @@ export default function RootHomePage() {
 
         if (user.role === 'ADMIN') {
           setCurrentRole('ADMIN');
+          localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
           showToast({
             type: 'success',
             title: 'Authenticated as NOTTO Admin',
@@ -97,9 +98,11 @@ export default function RootHomePage() {
           router.push('/admin/queue');
         } else {
           setCurrentRole('HOSPITAL_USER');
-          if (user.hospital_id) {
-            setCurrentHospitalId(user.hospital_id);
+          const hospId = user.hospital_id || '';
+          if (hospId) {
+            setCurrentHospitalId(hospId);
           }
+          localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: hospId }));
           showToast({
             type: 'success',
             title: `Welcome, ${user.full_name || 'Coordinator'}`,

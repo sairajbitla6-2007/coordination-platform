@@ -1,11 +1,25 @@
 'use client';
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { usePlatform } from '@/lib/context/PlatformContext';
 
 export default function PendingReviewPage() {
-  const { currentHospital, logout } = usePlatform();
+  const router = useRouter();
+  const { currentHospital, logout, showToast } = usePlatform();
+
+  // Auto-detect NOTTO Admin verification approval in real-time and transition to dashboard
+  useEffect(() => {
+    if (currentHospital?.status === 'VERIFIED') {
+      showToast({
+        type: 'success',
+        title: 'Accreditation Approved!',
+        message: 'NOTTO Administrator has verified your facility. Opening Hospital Coordination Portal...'
+      });
+      router.push('/dashboard');
+    }
+  }, [currentHospital?.status, router, showToast]);
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">

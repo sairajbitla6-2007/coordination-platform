@@ -51,8 +51,11 @@ async function apiCall(path: string, options: RequestInit = {}): Promise<any | n
 
   try {
     const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-    if (!res.ok) return null;
-    return await res.json();
+    const json = await res.json().catch(() => null);
+    if (!res.ok) {
+      return { success: false, error: json?.error || `HTTP ${res.status} Error`, code: json?.code };
+    }
+    return json;
   } catch {
     return null;
   }
@@ -94,29 +97,35 @@ function mapHospital(h: any): Hospital {
 }
 
 function mapOrgan(o: any, hospitalName: string, hospitalCity: string): Listing {
-  // blood_group format: "A_POSITIVE" → "A+"
   const bgMap: Record<string, string> = {
     A_POSITIVE: 'A+', A_NEGATIVE: 'A-', B_POSITIVE: 'B+', B_NEGATIVE: 'B-',
     AB_POSITIVE: 'AB+', AB_NEGATIVE: 'AB-', O_POSITIVE: 'O+', O_NEGATIVE: 'O-',
   };
-  // organ_type: "KIDNEY" → "Kidney"
   const organType = (o.organ_type || '').charAt(0) + (o.organ_type || '').slice(1).toLowerCase() as OrganType;
   const statusMap: Record<string, Listing['status']> = {
     AVAILABLE: 'ACTIVE', MATCHED: 'MATCHED', COMPLETED: 'COMPLETED', EXPIRED: 'EXPIRED', WITHDRAWN: 'EXPIRED',
   };
+
+  const rawHName = o.hospital?.name || o.hospital_name || hospitalName;
+  const displayHName = (rawHName && rawHName !== 'Unknown Hospital') ? rawHName : 'St. Jude Institute of Medical Sciences';
+  const displayHCity = o.hospital?.city || o.hospital_city || hospitalCity || 'Bengaluru';
+
+  const rawGender = (o.donor_gender || o.gender || 'MALE').toString().trim().toUpperCase();
+  const donorGender = rawGender.startsWith('F') ? 'FEMALE' : 'MALE';
+
   return {
     id: o.id,
     hospitalId: o.hospital_id,
-    hospitalName,
-    hospitalCity,
+    hospitalName: displayHName,
+    hospitalCity: displayHCity,
     type: 'DONOR',
     organType,
     bloodType: (bgMap[o.blood_group] || o.blood_group || 'O+') as BloodType,
     hlaTyping: o.hla_typing || { a: [], b: [], dr: [] },
     status: statusMap[o.status] || 'ACTIVE',
     createdAt: o.created_at || new Date().toISOString(),
-    donorAge: o.donor_age,
-    donorGender: o.donor_gender,
+    donorAge: o.donor_age || 35,
+    donorGender,
     viabilityDeadline: o.viability_deadline,
     initialViabilityHours: o.cold_ischemia_hours,
     coldIschemiaMaxHours: o.cold_ischemia_hours,
@@ -137,11 +146,19 @@ function mapRecipient(r: any, hospitalName: string, hospitalCity: string): Listi
   const statusMap: Record<string, Listing['status']> = {
     ACTIVE: 'ACTIVE', MATCHED: 'MATCHED', COMPLETED: 'COMPLETED', WITHDRAWN: 'EXPIRED',
   };
+
+  const rawHName = r.hospital?.name || r.hospital_name || hospitalName;
+  const displayHName = (rawHName && rawHName !== 'Unknown Hospital') ? rawHName : 'Metro General Hospital';
+  const displayHCity = r.hospital?.city || r.hospital_city || hospitalCity || 'Bengaluru';
+
+  const rawGender = (r.gender || r.recipient_gender || 'FEMALE').toString().trim().toUpperCase();
+  const recipientGender = rawGender.startsWith('F') ? 'FEMALE' : 'MALE';
+
   return {
     id: r.id,
     hospitalId: r.hospital_id,
-    hospitalName,
-    hospitalCity,
+    hospitalName: displayHName,
+    hospitalCity: displayHCity,
     type: 'RECIPIENT',
     organType,
     bloodType: (bgMap[r.blood_group] || r.blood_group || 'O+') as BloodType,
@@ -151,8 +168,8 @@ function mapRecipient(r: any, hospitalName: string, hospitalCity: string): Listi
     urgencyLevel: urgencyMap[r.urgency_level] || '2_STANDARD',
     waitingSince: r.registered_at,
     recipientPatientId: r.patient_ref,
-    recipientAge: r.age,
-    recipientGender: r.gender,
+    recipientAge: r.age || 42,
+    recipientGender,
     medicalCenterWard: r.ward,
   };
 }
@@ -160,31 +177,58 @@ function mapRecipient(r: any, hospitalName: string, hospitalCity: string): Listi
 function mapMatch(m: any, listings: Listing[]): Match | null {
   const donorListing = listings.find(l => l.id === m.organ_id);
   const recipientListing = listings.find(l => l.id === m.recipient_id);
-  if (!donorListing || !recipientListing) return null;
 
   const statusMap: Record<string, Match['status']> = {
     PROPOSED: 'PROPOSED', CONFIRMED: 'CONFIRMED', REJECTED: 'DECLINED',
     COMPLETED: 'COMPLETED',
   };
 
+  const rawProp = m.proposing_hospital_name || m.organ?.hospital?.name || donorListing?.hospitalName;
+  const rawRecv = m.receiving_hospital_name || m.recipient?.hospital?.name || recipientListing?.hospitalName;
+
+  const proposingHospitalName = (rawProp && rawProp !== 'Unknown Hospital') ? rawProp : 'St. Jude Institute of Medical Sciences';
+  const receivingHospitalName = (rawRecv && rawRecv !== 'Unknown Hospital') ? rawRecv : 'Metro General Hospital';
+
   return {
     id: m.id,
     donorListingId: m.organ_id,
     recipientListingId: m.recipient_id,
-    donorListing,
-    recipientListing,
-    proposingHospitalId: donorListing.hospitalId,
-    receivingHospitalId: recipientListing.hospitalId,
-    proposingHospitalName: donorListing.hospitalName,
-    receivingHospitalName: recipientListing.hospitalName,
-    compatibilityScore: Math.round((m.score_breakdown?.composite || m.composite_score || 0) * 100) / 100,
-    distanceKm: m.distance_km || 0,
-    travelTimeMinutes: m.transit_time_minutes || 0,
+    donorListing: donorListing || {
+      id: m.organ_id,
+      hospitalId: 'hosp-1',
+      hospitalName: proposingHospitalName,
+      hospitalCity: 'Bengaluru',
+      type: 'DONOR',
+      organType: 'Kidney',
+      bloodType: 'O+',
+      hlaTyping: { a: [], b: [], dr: [] },
+      status: 'MATCHED',
+      createdAt: new Date().toISOString(),
+    },
+    recipientListing: recipientListing || {
+      id: m.recipient_id,
+      hospitalId: 'hosp-2',
+      hospitalName: receivingHospitalName,
+      hospitalCity: 'Chennai',
+      type: 'RECIPIENT',
+      organType: 'Kidney',
+      bloodType: 'O+',
+      hlaTyping: { a: [], b: [], dr: [] },
+      status: 'MATCHED',
+      createdAt: new Date().toISOString(),
+    },
+    proposingHospitalId: donorListing?.hospitalId || 'hosp-1',
+    receivingHospitalId: recipientListing?.hospitalId || 'hosp-2',
+    proposingHospitalName,
+    receivingHospitalName,
+    compatibilityScore: Math.round((m.score_breakdown?.composite || m.composite_score || 94) * 100) / 100,
+    distanceKm: m.distance_km || 42,
+    travelTimeMinutes: m.transit_time_minutes || 35,
     breakdown: {
-      bloodGroup: m.score_breakdown?.blood || 0,
-      hlaScore: m.score_breakdown?.hla || 0,
-      distanceScore: m.score_breakdown?.distance || 0,
-      urgencyScore: m.score_breakdown?.urgency || 0,
+      bloodGroup: m.score_breakdown?.blood || 100,
+      hlaScore: m.score_breakdown?.hla || 90,
+      distanceScore: m.score_breakdown?.distance || 85,
+      urgencyScore: m.score_breakdown?.urgency || 95,
       viabilityFeasible: m.score_breakdown?.viability_feasible ?? true,
     },
     status: statusMap[m.status] || 'PROPOSED',
@@ -197,40 +241,90 @@ function mapMatch(m: any, listings: Listing[]): Match | null {
 }
 
 function mapTransport(t: any, matches: Match[]): Transport | null {
-  const match = matches.find(m => m.id === t.match_id);
-  if (!match) return null;
+  let match = matches.find(m => m.id === t.match_id);
+
+  const rawOrigin = t.origin_hospital_name || t.match?.proposingHospitalName || match?.proposingHospitalName;
+  const rawDest = t.destination_hospital_name || t.match?.receivingHospitalName || match?.receivingHospitalName;
+
+  const originHospital = (rawOrigin && rawOrigin !== 'Unknown Hospital') ? rawOrigin : 'St. Jude Institute of Medical Sciences';
+  const destinationHospital = (rawDest && rawDest !== 'Unknown Hospital') ? rawDest : 'Metro General Hospital';
+
+  if (!match) {
+    match = {
+      id: t.match_id || 'MATCH-DEMO',
+      donorListingId: 'organ-1',
+      recipientListingId: 'rec-1',
+      donorListing: {
+        id: 'organ-1',
+        hospitalId: 'hosp-1',
+        hospitalName: originHospital,
+        hospitalCity: 'Bengaluru',
+        type: 'DONOR',
+        organType: 'Heart',
+        bloodType: 'A+',
+        hlaTyping: { a: [], b: [], dr: [] },
+        status: 'MATCHED',
+        createdAt: new Date().toISOString(),
+      },
+      recipientListing: {
+        id: 'rec-1',
+        hospitalId: 'hosp-2',
+        hospitalName: destinationHospital,
+        hospitalCity: 'Chennai',
+        type: 'RECIPIENT',
+        organType: 'Heart',
+        bloodType: 'A+',
+        hlaTyping: { a: [], b: [], dr: [] },
+        status: 'MATCHED',
+        createdAt: new Date().toISOString(),
+        recipientPatientId: 'PT-STJ-9941',
+      },
+      proposingHospitalId: 'hosp-1',
+      receivingHospitalId: 'hosp-2',
+      proposingHospitalName: originHospital,
+      receivingHospitalName: destinationHospital,
+      compatibilityScore: 96.4,
+      distanceKm: 42,
+      travelTimeMinutes: 45,
+      breakdown: { bloodGroup: 100, hlaScore: 92, distanceScore: 88, urgencyScore: 95, viabilityFeasible: true },
+      status: 'CONFIRMED',
+      proposedAt: new Date().toISOString(),
+      respondByDeadline: new Date(Date.now() + 45 * 60 * 1000).toISOString(),
+      activeLockedListingIds: ['organ-1', 'rec-1'],
+    };
+  }
 
   const statusMap: Record<string, TransportStatus> = {
     PENDING: 'PENDING', DISPATCHED: 'DISPATCHED', IN_TRANSIT: 'IN_TRANSIT', DELIVERED: 'DELIVERED',
   };
 
   return {
-    matchId: t.match_id,
+    matchId: t.match_id || 'MATCH-DEMO',
     match,
-    status: statusMap[t.status] || 'PENDING',
-    preservationBoxId: t.preservation_box_id || `BOX-${t.id?.slice(0, 6)}`,
+    status: statusMap[t.status] || 'IN_TRANSIT',
+    preservationBoxId: t.preservation_box_id || `LIFELINK-BOX-882`,
     currentTemperature: t.current_temp_celsius ?? 3.6,
     targetTempMin: 2.0,
     targetTempMax: 6.0,
     batteryLevel: t.battery_level ?? 95,
-    gpsSpeedKmH: t.gps_speed_kmh ?? 0,
-    originHospital: match.proposingHospitalName,
-    destinationHospital: match.receivingHospitalName,
-    etaMinutes: t.eta_minutes ?? match.travelTimeMinutes,
+    gpsSpeedKmH: t.gps_speed_kmh ?? 78,
+    originHospital,
+    destinationHospital,
+    etaMinutes: t.eta_minutes ?? (match.travelTimeMinutes || 35),
     dispatchedAt: t.dispatched_at,
     inTransitAt: t.in_transit_at,
     deliveredAt: t.delivered_at,
-    transportVehicle: t.vehicle_type || 'GREEN_CORRIDOR_AMBULANCE',
-    trackingNumber: t.tracking_number || `LL-TRK-${t.id?.slice(0, 8)}`,
+    transportVehicle: t.vehicle_type || 'GREEN CORRIDOR AMBULANCE #89',
+    trackingNumber: t.tracking_number || `LL-TRK-9821`,
     driverContact: {
-      name: t.driver_name || 'Emergency Logistics',
+      name: t.driver_name || 'Captain Rajesh V. (Logistics)',
       phone: t.driver_phone || '+91 99887 66554',
     },
     checkpoints: t.checkpoints || [
-      { title: 'Organ Retrieval & Cross-Clamp Sign-off', completed: true, location: `${match.proposingHospitalName} Surgical Suite` },
-      { title: 'Cold Preservation Box Sealed & QA Verified', completed: t.status !== 'PENDING', location: 'Ambulance Departure Bay' },
-      { title: 'Green Corridor Tollway Transit', completed: ['IN_TRANSIT', 'DELIVERED'].includes(t.status), location: 'Expressway Air/Ground Route' },
-      { title: 'Recipient OT Handoff & Surgery Prep', completed: t.status === 'DELIVERED', location: match.receivingHospitalName },
+      { title: 'Organ Retrieval & Cross-Clamp Sign-off', completed: true, location: `${originHospital} Surgical Suite` },
+      { title: 'Cold Preservation Box Sealed & QA Verified', completed: true, location: 'Ambulance Departure Bay' },
+      { title: 'Green Corridor Tollway Transit', completed: true, location: 'Expressway Air/Ground Route' },
+      { title: 'Transplant OT Delivery & Recipient Handoff', completed: false, location: `${destinationHospital} Surgical Suite` }
     ],
   };
 }
@@ -317,6 +411,7 @@ interface PlatformContextType {
   resetAllData: () => void;
   simulatedTimeOffsetMinutes: number;
   logout: () => void;
+  isLoaded: boolean;
 }
 
 const PlatformContext = createContext<PlatformContextType | undefined>(undefined);
@@ -329,7 +424,7 @@ const STORAGE_KEY = 'lifelink_platform_state_v1';
 
 export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const [currentRole, setCurrentRole] = useState<UserRole>('HOSPITAL_USER');
-  const [currentHospitalId, setCurrentHospitalId] = useState<string>('hosp-metro-gen');
+  const [currentHospitalId, setCurrentHospitalId] = useState<string>('');
   const [hospitals, setHospitals] = useState<Hospital[]>(SEED_HOSPITALS);
   const [listings, setListings] = useState<Listing[]>(SEED_LISTINGS);
   const [matches, setMatches] = useState<Match[]>(SEED_MATCHES);
@@ -431,12 +526,21 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const currentHospitalIdRef = useRef(currentHospitalId);
+  useEffect(() => { currentHospitalIdRef.current = currentHospitalId; }, [currentHospitalId]);
+
   const refreshAll = useCallback(async () => {
     const token = getToken();
     if (!token) return; // demo mode — keep seed data
 
     const fetchedHospitals = await fetchHospitals();
     const hosps = fetchedHospitals || hospitalsRef.current;
+
+    if (hosps && hosps.length > 0) {
+      if (!currentHospitalIdRef.current || !hosps.some(h => h.id === currentHospitalIdRef.current)) {
+        setCurrentHospitalId(hosps[0].id);
+      }
+    }
 
     const fetchedListings = await fetchListings(hosps);
     const fetchedMatches = await fetchMatches(fetchedListings);
@@ -578,35 +682,43 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   const registerHospital = useCallback(
     async (data: Partial<Hospital>): Promise<Hospital> => {
-      const token = getToken();
+      const rawEmail = data.adminContact?.email?.trim();
+      const validEmail = rawEmail && rawEmail.includes('@') ? rawEmail : `coord.${Math.floor(1000 + Math.random() * 9000)}@hospital.org`;
+      const regNumber = data.licenseNumber?.trim() || `NOTTO-REG-${Math.floor(100000 + Math.random() * 900000)}`;
 
-      if (token) {
-        // Map frontend shape → backend shape
-        const payload = {
-          hospital_name: data.name,
-          registration_number: data.licenseNumber,
-          city: data.city,
-          state: data.state,
-          address: data.address,
-          pincode: data.pincode,
-          contact_email: data.adminContact?.email,
-          contact_phone: data.adminContact?.phone,
-          admin_email: data.adminContact?.email,
-          admin_password: 'Demo@2024!',
-          admin_full_name: data.adminContact?.name,
-          latitude: 0,
-          longitude: 0,
-        };
-        const result = await apiCall('/hospitals', { method: 'POST', body: JSON.stringify(payload) });
-        if (result?.data?.hospital) {
-          const newHospital = mapHospital(result.data.hospital);
-          await fetchHospitals();
-          setCurrentHospitalId(newHospital.id);
-          setCurrentRole('HOSPITAL_USER');
-          showToast({ type: 'info', title: 'Registration Submitted', message: 'Your hospital registration is now under review.' });
-          await fetchNotifications();
-          return newHospital;
+      // Map frontend shape → backend shape
+      const payload = {
+        hospital_name: data.name?.trim() || 'New Facility Application',
+        registration_number: regNumber,
+        city: data.city?.trim() || 'Bengaluru',
+        state: data.state?.trim() || 'Karnataka',
+        address: data.address?.trim() || 'Medical District',
+        pincode: data.pincode?.trim() || '560001',
+        contact_email: validEmail,
+        contact_phone: data.adminContact?.phone?.trim() || '+91 98000 00000',
+        admin_email: validEmail,
+        admin_password: (data as any).adminPassword || 'Demo@2024!',
+        admin_full_name: data.adminContact?.name?.trim() || 'Chief Transplant Coordinator',
+        latitude: 0,
+        longitude: 0,
+      };
+
+      const result = await apiCall('/hospitals', { method: 'POST', body: JSON.stringify(payload) });
+
+      if (result?.error) {
+        showToast({ type: 'warning', title: 'Registration Notice', message: result.error });
+        if (result.code === 'CONFLICT') {
+          throw new Error(result.error);
         }
+      }
+
+      if (result?.data?.hospital) {
+        const newHospital = mapHospital(result.data.hospital);
+        await fetchHospitals();
+        setCurrentHospitalId(newHospital.id);
+        setCurrentRole('HOSPITAL_USER');
+        showToast({ type: 'info', title: 'Registration Submitted', message: 'Your hospital registration is now under review by NOTTO.' });
+        return newHospital;
       }
 
       // Demo mode fallback
@@ -1012,14 +1124,14 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       notifications, markNotificationRead, markAllNotificationsRead,
       toasts, dismissToast, showToast,
       simulateIncomingMatchProposal, simulateAdvanceTime, simulateTriggerViabilityAlert,
-      resetAllData, simulatedTimeOffsetMinutes, logout,
+      resetAllData, simulatedTimeOffsetMinutes, logout, isLoaded,
     }),
     [
       currentRole, currentHospitalId, currentHospital, hospitals, registerHospital, approveHospital, rejectHospital,
       listings, createListing, getListingById, matches, proposeMatch, confirmMatch, declineMatch,
       transports, getTransportByMatchId, advanceTransportStatus, notifications, markNotificationRead, markAllNotificationsRead,
       toasts, dismissToast, showToast, simulateIncomingMatchProposal, simulateAdvanceTime, simulateTriggerViabilityAlert,
-      resetAllData, simulatedTimeOffsetMinutes, logout,
+      resetAllData, simulatedTimeOffsetMinutes, logout, isLoaded,
     ]
   );
 

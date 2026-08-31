@@ -15,7 +15,19 @@ export default function RoleGuard({
   requiredRole = 'HOSPITAL_USER',
   requireVerifiedHospital = true
 }: RoleGuardProps) {
-  const { currentRole, currentHospital, logout } = usePlatform();
+  const { currentRole, currentHospital, logout, isLoaded } = usePlatform();
+
+  // Block rendering until session & JWT state hydration is complete
+  if (!isLoaded) {
+    return (
+      <div className="min-h-[400px] flex flex-col items-center justify-center p-8 space-y-4">
+        <div className="w-10 h-10 border-3 border-primary border-t-transparent rounded-full animate-spin" />
+        <span className="text-xs font-semibold text-on-surface-variant tracking-wider uppercase">
+          Verifying Credentials...
+        </span>
+      </div>
+    );
+  }
 
   // If page requires Admin and current user is Hospital User
   if (requiredRole === 'ADMIN' && currentRole !== 'ADMIN') {
