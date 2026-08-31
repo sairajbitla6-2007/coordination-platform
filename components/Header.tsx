@@ -216,10 +216,17 @@ export default function Header() {
                   </button>
                 </div>
 
-                <div className="mt-2 pt-2 border-t border-outline-variant/20">
+                <div className="mt-2 pt-2 border-t border-outline-variant/20 space-y-0.5">
+                  <Link
+                    href="/login"
+                    className="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-primary hover:bg-primary/10 flex items-center gap-1.5"
+                  >
+                    <span className="material-symbols-outlined text-[16px]">login</span>
+                    Sign In with Password
+                  </Link>
                   <Link
                     href="/register"
-                    className="w-full text-left px-3 py-1.5 rounded-lg text-xs font-semibold text-primary hover:bg-primary/10 flex items-center gap-1.5"
+                    className="w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium text-on-surface-variant hover:bg-surface-container flex items-center gap-1.5"
                   >
                     <span className="material-symbols-outlined text-[16px]">add_circle</span>
                     Register New Hospital

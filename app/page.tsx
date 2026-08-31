@@ -86,11 +86,18 @@ export default function HomePage() {
               Enter Hospital Portal
             </Link>
             <Link
-              href="/register"
+              href="/login"
               className="w-full sm:w-auto rounded-full bg-surface-container-highest hover:bg-surface-dim text-on-surface px-8 py-3.5 font-semibold text-sm shadow-xs transition-all flex items-center justify-center gap-2 border border-outline-variant/30"
             >
+              <span className="material-symbols-outlined text-[20px]">login</span>
+              Hospital Sign In
+            </Link>
+            <Link
+              href="/register"
+              className="w-full sm:w-auto rounded-full bg-surface-container hover:bg-surface-container-high text-on-surface px-6 py-3.5 font-semibold text-sm shadow-xs transition-all flex items-center justify-center gap-2 border border-outline-variant/30"
+            >
               <span className="material-symbols-outlined text-[20px]">domain_add</span>
-              Register Hospital
+              Register
             </Link>
             <Link
               href="/admin/queue"
