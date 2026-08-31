@@ -15,23 +15,25 @@ export default function RoleGuard({
   requiredRole = 'HOSPITAL_USER',
   requireVerifiedHospital = true
 }: RoleGuardProps) {
-  const { currentRole, currentHospital, setCurrentRole, setCurrentHospitalId } = usePlatform();
+  const { currentRole, currentHospital, logout } = usePlatform();
 
   // If page requires Admin and current user is Hospital User
   if (requiredRole === 'ADMIN' && currentRole !== 'ADMIN') {
     return (
       <div className="max-w-xl mx-auto my-12 p-8 bg-surface-container rounded-2xl border border-outline-variant/30 text-center shadow-sm">
-        <span className="material-symbols-outlined text-tertiary text-[48px] mb-4">admin_panel_settings</span>
-        <h2 className="text-2xl font-semibold mb-2">NOTTO Admin Desk Access Required</h2>
+        <span className="material-symbols-outlined text-error text-[48px] mb-4">gpp_bad</span>
+        <h2 className="text-2xl font-semibold mb-2">NOTTO Admin Desk Restricted</h2>
         <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
-          You are currently viewing as a Hospital Coordinator. Switch your active session to Platform Admin to manage accreditation queues.
+          Access to the National Accreditation Queue & Governance Desk requires NOTTO Administrator credentials.
         </p>
-        <button
-          onClick={() => setCurrentRole('ADMIN')}
-          className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm px-6 py-2.5 rounded-full shadow-xs transition-all inline-flex items-center gap-2"
-        >
-          <span className="material-symbols-outlined text-[18px]">switch_account</span> Switch to NOTTO Admin
-        </button>
+        <div className="flex justify-center gap-3">
+          <Link
+            href="/dashboard"
+            className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm px-6 py-2.5 rounded-full shadow-xs transition-all inline-flex items-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">dashboard</span> Return to Hospital Dashboard
+          </Link>
+        </div>
       </div>
     );
   }
@@ -40,26 +42,17 @@ export default function RoleGuard({
   if (requiredRole === 'HOSPITAL_USER' && currentRole === 'ADMIN') {
     return (
       <div className="max-w-xl mx-auto my-12 p-8 bg-surface-container rounded-2xl border border-outline-variant/30 text-center shadow-sm">
-        <span className="material-symbols-outlined text-primary text-[48px] mb-4">local_hospital</span>
-        <h2 className="text-2xl font-semibold mb-2">Hospital Operational Area</h2>
+        <span className="material-symbols-outlined text-tertiary text-[48px] mb-4">admin_panel_settings</span>
+        <h2 className="text-2xl font-semibold mb-2">NOTTO Administrative Mode Active</h2>
         <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
-          You are currently in NOTTO Administrative mode. Switch to a verified hospital to view clinical dashboards, organ listings, and active transport streams.
+          You are currently logged in as a National Governance Administrator. Please use your Verification Queue desk to inspect and accredit registered hospitals.
         </p>
-        <div className="flex flex-wrap justify-center gap-3">
-          <button
-            onClick={() => {
-              setCurrentRole('HOSPITAL_USER');
-              setCurrentHospitalId('hosp-metro-gen');
-            }}
-            className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm px-5 py-2 rounded-full shadow-xs transition-all"
-          >
-            Switch to Metro General Hospital
-          </button>
+        <div className="flex justify-center gap-3">
           <Link
             href="/admin/queue"
-            className="bg-surface-container-highest hover:bg-surface-dim text-on-surface font-semibold text-sm px-5 py-2 rounded-full transition-all"
+            className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm px-6 py-2.5 rounded-full transition-all inline-flex items-center gap-2"
           >
-            Go to Admin Queue
+            <span className="material-symbols-outlined text-[18px]">how_to_reg</span> Open Verification Queue
           </Link>
         </div>
       </div>
@@ -72,15 +65,15 @@ export default function RoleGuard({
       return (
         <div className="max-w-md mx-auto my-16 p-8 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 text-center shadow-sm">
           <span className="material-symbols-outlined text-outline text-[48px] mb-3">domain_disabled</span>
-          <h2 className="text-xl font-semibold mb-2">No Active Hospital Selected</h2>
+          <h2 className="text-xl font-semibold mb-2">No Hospital Associated</h2>
           <p className="text-on-surface-variant text-sm mb-6">
-            Please register your hospital or select a demo hospital profile.
+            Please register your hospital account to access organ matching features.
           </p>
           <Link
             href="/register"
             className="bg-primary text-on-primary font-semibold text-sm px-6 py-2.5 rounded-full inline-block"
           >
-            Register Hospital
+            Register Hospital Application
           </Link>
         </div>
       );
@@ -97,36 +90,24 @@ export default function RoleGuard({
           </span>
           <h2 className="text-2xl font-semibold text-on-surface mb-2">{currentHospital.name}</h2>
           <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
-            Your hospital registration application (Ref: #{currentHospital.licenseNumber}) is undergoing compliance verification by NOTTO. Clinical matching and donor listings are locked until approval.
+            Your hospital application is undergoing accreditation review by NOTTO compliance officers. Clinical matching and organ listings remain locked until approved.
           </p>
           <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/30 text-left text-xs mb-6 space-y-2">
             <div className="flex justify-between">
-              <span className="text-on-surface-variant">Application Date:</span>
-              <span className="font-semibold text-on-surface">Aug 20, 2026</span>
+              <span className="text-on-surface-variant">Application Reference:</span>
+              <span className="font-semibold text-on-surface font-mono">#{currentHospital.licenseNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-on-surface-variant">Transplant Admin:</span>
-              <span className="font-semibold text-on-surface">{currentHospital.adminContact.name}</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-on-surface-variant">Verification Desk:</span>
-              <span className="font-semibold text-secondary">NOTTO State Authorization Cell</span>
+              <span className="text-on-surface-variant">Verification SLA:</span>
+              <span className="font-semibold text-secondary">Under 24 Hours</span>
             </div>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex justify-center">
             <button
-              onClick={() => {
-                setCurrentHospitalId('hosp-metro-gen');
-              }}
-              className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs px-5 py-2.5 rounded-full shadow-xs transition-all"
+              onClick={() => logout && logout()}
+              className="bg-surface-container-high hover:bg-surface-dim text-on-surface font-semibold text-xs px-5 py-2.5 rounded-full transition-all flex items-center gap-1.5"
             >
-              Switch to Verified Demo Hospital
-            </button>
-            <button
-              onClick={() => setCurrentRole('ADMIN')}
-              className="bg-surface-container-high hover:bg-surface-dim text-on-surface font-semibold text-xs px-5 py-2.5 rounded-full transition-all"
-            >
-              Open as Admin to Approve
+              <span className="material-symbols-outlined text-[16px]">logout</span> Sign Out
             </button>
           </div>
         </div>
@@ -147,7 +128,7 @@ export default function RoleGuard({
             <span className="font-bold text-error uppercase tracking-wider text-[10px]">Reason for Rejection</span>
             <p className="text-on-surface leading-relaxed">{currentHospital.rejectionReason}</p>
           </div>
-          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <div className="flex justify-center gap-3">
             <Link
               href="/register"
               className="bg-primary text-on-primary font-semibold text-xs px-5 py-2.5 rounded-full shadow-xs transition-all"
@@ -155,10 +136,10 @@ export default function RoleGuard({
               Submit Revised Application
             </Link>
             <button
-              onClick={() => setCurrentHospitalId('hosp-metro-gen')}
+              onClick={() => logout && logout()}
               className="bg-surface-container-high text-on-surface font-semibold text-xs px-5 py-2.5 rounded-full"
             >
-              Switch to Metro General
+              Sign Out
             </button>
           </div>
         </div>

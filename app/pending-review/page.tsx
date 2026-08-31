@@ -5,18 +5,18 @@ import Link from 'next/link';
 import { usePlatform } from '@/lib/context/PlatformContext';
 
 export default function PendingReviewPage() {
-  const { currentHospital, setCurrentRole, setCurrentHospitalId } = usePlatform();
+  const { currentHospital, logout } = usePlatform();
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-lg bg-surface-container-low rounded-3xl p-8 sm:p-10 text-center border border-outline-variant/30 shadow-lg relative overflow-hidden flex flex-col items-center">
-        {/* Soft Background Blur */}
+        {/* Background Blur */}
         <div className="absolute inset-0 pointer-events-none opacity-20">
           <div className="absolute -top-10 -right-10 w-40 h-40 rounded-full bg-primary blur-2xl" />
           <div className="absolute -bottom-10 -left-10 w-40 h-40 rounded-full bg-secondary blur-2xl" />
         </div>
 
-        {/* Animated Hourglass Icon */}
+        {/* Hourglass Icon */}
         <div className="relative w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-6 shadow-sm animate-pulse">
           <span className="material-symbols-outlined text-[48px] text-primary">
             hourglass_top
@@ -61,26 +61,14 @@ export default function PendingReviewPage() {
           </div>
         </div>
 
-        {/* Quick Actions & Demo Shortcuts */}
+        {/* Actions */}
         <div className="w-full flex flex-col gap-3">
           <button
-            onClick={() => {
-              setCurrentRole('ADMIN');
-            }}
-            className="w-full bg-tertiary hover:bg-tertiary/90 text-on-tertiary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
+            onClick={() => logout && logout()}
+            className="w-full bg-surface-container-high hover:bg-surface-dim text-on-surface font-semibold text-xs py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
           >
-            <span className="material-symbols-outlined text-[18px]">admin_panel_settings</span>
-            Open NOTTO Admin Desk to Approve
-          </button>
-
-          <button
-            onClick={() => {
-              setCurrentRole('HOSPITAL_USER');
-              setCurrentHospitalId('hosp-metro-gen');
-            }}
-            className="w-full bg-surface-container-high hover:bg-surface-dim text-on-surface font-semibold text-xs py-3 px-4 rounded-xl transition-all"
-          >
-            Switch to Verified Demo Hospital (Metro General)
+            <span className="material-symbols-outlined text-[18px]">logout</span>
+            Sign Out of Account
           </button>
         </div>
 

@@ -316,6 +316,7 @@ interface PlatformContextType {
   simulateTriggerViabilityAlert: () => void;
   resetAllData: () => void;
   simulatedTimeOffsetMinutes: number;
+  logout: () => void;
 }
 
 const PlatformContext = createContext<PlatformContextType | undefined>(undefined);
@@ -342,8 +343,11 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   // ── Toast helpers ───────────────────────────────────────────────
   const showToast = useCallback((toast: Omit<ToastAlert, 'id'>) => {
     const id = 'toast-' + Math.random().toString(36).substring(2, 9);
-    setToasts(prev => [...prev, { ...toast, id }]);
-    const duration = toast.duration || 6000;
+    setToasts(prev => {
+      const filtered = prev.filter(t => t.title !== toast.title);
+      return [...filtered.slice(-1), { ...toast, id }];
+    });
+    const duration = toast.duration || 4000;
     setTimeout(() => {
       setToasts(prev => prev.filter(t => t.id !== id));
     }, duration);
@@ -471,6 +475,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     } else {
       setIsLoaded(true);
     }
+
+    // 5-second real-time auto-polling background timer for PostgreSQL DB sync
+    const pollInterval = setInterval(() => {
+      if (getToken()) {
+        refreshAll();
+      }
+    }, 5000);
+
+    return () => clearInterval(pollInterval);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Save lightweight UI state to localStorage ───────────────────
@@ -978,6 +991,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     showToast({ type: 'info', title: 'Platform Reset', message: 'All mock hospitals, listings, matches and transports restored to clean seed state.' });
   }, [showToast]);
 
+  const logout = useCallback(() => {
+    localStorage.removeItem(JWT_KEY);
+    setCurrentRole('HOSPITAL_USER');
+    setCurrentHospitalId('');
+    if (typeof window !== 'undefined') {
+      window.location.href = '/';
+    }
+  }, []);
+
   // ── Context value ───────────────────────────────────────────────
 
   const value = useMemo(
@@ -990,14 +1012,14 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       notifications, markNotificationRead, markAllNotificationsRead,
       toasts, dismissToast, showToast,
       simulateIncomingMatchProposal, simulateAdvanceTime, simulateTriggerViabilityAlert,
-      resetAllData, simulatedTimeOffsetMinutes,
+      resetAllData, simulatedTimeOffsetMinutes, logout,
     }),
     [
       currentRole, currentHospitalId, currentHospital, hospitals, registerHospital, approveHospital, rejectHospital,
       listings, createListing, getListingById, matches, proposeMatch, confirmMatch, declineMatch,
       transports, getTransportByMatchId, advanceTransportStatus, notifications, markNotificationRead, markAllNotificationsRead,
       toasts, dismissToast, showToast, simulateIncomingMatchProposal, simulateAdvanceTime, simulateTriggerViabilityAlert,
-      resetAllData, simulatedTimeOffsetMinutes,
+      resetAllData, simulatedTimeOffsetMinutes, logout,
     ]
   );
 
