@@ -489,8 +489,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
 
     const combined = [...organListings, ...recipientListings];
-    if (combined.length > 0) setListings(combined);
-    return combined;
+    const uniqueMap = new Map<string, Listing>();
+    combined.forEach(item => {
+      if (item && item.id && !uniqueMap.has(item.id)) {
+        uniqueMap.set(item.id, item);
+      }
+    });
+    const deduplicated = Array.from(uniqueMap.values());
+    if (deduplicated.length > 0) setListings(deduplicated);
+    return deduplicated;
   }, []);
 
   const fetchMatches = useCallback(async (currentListings: Listing[]) => {
