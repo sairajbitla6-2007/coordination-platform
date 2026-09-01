@@ -494,61 +494,107 @@ export default function TransportTrackingPage({ params }: { params: Promise<{ ma
 
           {/* Right Panel: Role-Gated Action Stepper & Organ Specs (4 cols) */}
           <div className="lg:col-span-4 space-y-5">
-            {/* Action Box: Advance Stepper */}
-            <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/30 shadow-2xs space-y-4">
-              <div className="flex items-center gap-2">
-                <span className="material-symbols-outlined text-primary text-[22px]">tune</span>
-                <h3 className="text-sm font-bold text-on-surface uppercase tracking-wider">
-                  Logistics State Control
-                </h3>
-              </div>
-              <p className="text-xs text-on-surface-variant leading-relaxed">
-                Step progression is configurable per hospital node (Donor center dispatches, Courier reports transit, Recipient confirms surgical delivery).
-              </p>
+            {/* Action Box: Advance Stepper (Donor Center Only) or Live Recipient Monitor */}
+            {isRecipientView ? (
+              <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/30 shadow-2xs space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-secondary text-[22px]">radar</span>
+                  <h3 className="text-sm font-bold text-on-surface uppercase tracking-wider">
+                    Recipient Monitor Desk
+                  </h3>
+                </div>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  Live organ transit telemetry monitored in real-time. Dispatch and transit controls are managed by the Donor Center (<strong className="text-on-surface">{match.proposingHospitalName}</strong>).
+                </p>
 
-              <div className="space-y-2 pt-1">
-                {transport.status === 'PENDING' && (
-                  <button
-                    onClick={() => handleAdvance('DISPATCHED')}
-                    disabled={isUpdating}
-                    className="w-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">inventory</span>
-                    Sign-Off & Dispatch Organ
-                  </button>
-                )}
+                <div className="p-4 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 space-y-2.5 text-xs">
+                  <div className="flex justify-between items-center pb-2 border-b border-outline-variant/20">
+                    <span className="text-on-surface-variant font-medium">Logistics Status:</span>
+                    <StatusBadge status={transport.status} size="sm" />
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-on-surface-variant font-medium">Perfusion Box ID:</span>
+                    <span className="font-mono font-bold text-on-surface">{transport.preservationBoxId}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-on-surface-variant font-medium">Cold Storage Temp:</span>
+                    <span className="font-mono font-bold text-primary tabular-nums">{transport.currentTemperature}°C</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-on-surface-variant font-medium">Estimated Transit ETA:</span>
+                    <span className="font-bold text-on-surface tabular-nums">{transport.etaMinutes} mins</span>
+                  </div>
+                </div>
 
-                {transport.status === 'DISPATCHED' && (
-                  <button
-                    onClick={() => handleAdvance('IN_TRANSIT')}
-                    disabled={isUpdating}
-                    className="w-full bg-secondary hover:bg-secondary/90 text-on-secondary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">local_shipping</span>
-                    Confirm In Transit (Highway)
-                  </button>
-                )}
-
-                {transport.status === 'IN_TRANSIT' && (
-                  <button
-                    onClick={() => handleAdvance('DELIVERED')}
-                    disabled={isUpdating}
-                    className="w-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-[18px]">done_all</span>
-                    Confirm Delivery & OT Receipt
-                  </button>
-                )}
-
-                {transport.status === 'DELIVERED' && (
-                  <div className="p-3 bg-primary-fixed/30 rounded-xl border border-primary/20 text-center text-xs text-on-primary-fixed-variant">
-                    <span className="material-symbols-outlined text-primary text-[24px] block mb-1">task_alt</span>
-                    <strong>Organ Delivered & Accepted</strong>
-                    <p className="text-[11px] mt-0.5">Match has successfully transitioned to COMPLETED.</p>
+                {transport.status === 'DELIVERED' ? (
+                  <div className="p-3 bg-secondary-container/40 rounded-xl border border-secondary/30 text-center text-xs text-on-secondary-container">
+                    <span className="material-symbols-outlined text-secondary text-[24px] block mb-1">task_alt</span>
+                    <strong>Organ Received at Surgical Suite</strong>
+                    <p className="text-[11px] mt-0.5">Recipient surgical team has received the graft for transplantation.</p>
+                  </div>
+                ) : (
+                  <div className="p-3 bg-surface-container-high/60 rounded-xl border border-outline-variant/30 text-center text-xs text-on-surface-variant flex items-center gap-2 justify-center">
+                    <span className="material-symbols-outlined text-primary text-[18px] animate-spin">sync</span>
+                    <span>Monitoring Live Telemetry Stream...</span>
                   </div>
                 )}
               </div>
-            </div>
+            ) : (
+              <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/30 shadow-2xs space-y-4">
+                <div className="flex items-center gap-2">
+                  <span className="material-symbols-outlined text-primary text-[22px]">tune</span>
+                  <h3 className="text-sm font-bold text-on-surface uppercase tracking-wider">
+                    Logistics State Control
+                  </h3>
+                </div>
+                <p className="text-xs text-on-surface-variant leading-relaxed">
+                  Donor Center dispatch authority. Step progression updates live telemetry for recipient hospital ({match.receivingHospitalName}).
+                </p>
+
+                <div className="space-y-2 pt-1">
+                  {transport.status === 'PENDING' && (
+                    <button
+                      onClick={() => handleAdvance('DISPATCHED')}
+                      disabled={isUpdating}
+                      className="w-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">inventory</span>
+                      Sign-Off & Dispatch Organ
+                    </button>
+                  )}
+
+                  {transport.status === 'DISPATCHED' && (
+                    <button
+                      onClick={() => handleAdvance('IN_TRANSIT')}
+                      disabled={isUpdating}
+                      className="w-full bg-secondary hover:bg-secondary/90 text-on-secondary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">local_shipping</span>
+                      Confirm In Transit (Highway)
+                    </button>
+                  )}
+
+                  {transport.status === 'IN_TRANSIT' && (
+                    <button
+                      onClick={() => handleAdvance('DELIVERED')}
+                      disabled={isUpdating}
+                      className="w-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">done_all</span>
+                      Confirm Delivery & OT Receipt
+                    </button>
+                  )}
+
+                  {transport.status === 'DELIVERED' && (
+                    <div className="p-3 bg-primary-fixed/30 rounded-xl border border-primary/20 text-center text-xs text-on-primary-fixed-variant">
+                      <span className="material-symbols-outlined text-primary text-[24px] block mb-1">task_alt</span>
+                      <strong>Organ Delivered & Accepted</strong>
+                      <p className="text-[11px] mt-0.5">Match has successfully transitioned to COMPLETED.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Organ Card Summary */}
             <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/30 shadow-2xs space-y-3 text-xs">
