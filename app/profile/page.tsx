@@ -8,22 +8,28 @@ import RoleGuard from '@/components/RoleGuard';
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 export default function HospitalProfilePage() {
-  const { currentHospital, showToast } = usePlatform();
+  const { currentHospital, currentRole, showToast } = usePlatform();
 
   const [urgentAlertsEnabled, setUrgentAlertsEnabled] = useState(true);
   const [soundAlertsEnabled, setSoundAlertsEnabled] = useState(true);
   const [digestEnabled, setDigestEnabled] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [customAvatar, setCustomAvatar] = useState<string>('');
 
-  // Load preferences from backend on mount
+  const isAdmin = currentRole === 'ADMIN';
+
+  // Load preferences & avatar from backend or localStorage
   useEffect(() => {
+    const savedAvatar = localStorage.getItem('organlink_custom_avatar');
+    if (savedAvatar) setCustomAvatar(savedAvatar);
+
     const token = localStorage.getItem(JWT_KEY);
     if (!token) return;
 
     fetch(`${API_BASE}/auth/preferences`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-      .then(res => res.ok ? res.json() : null)
+      .then(res => (res.ok ? res.json() : null))
       .then(data => {
         if (data?.data?.preferences) {
           const p = data.data.preferences;
@@ -32,8 +38,34 @@ export default function HospitalProfilePage() {
           setDigestEnabled(Boolean(p.digest));
         }
       })
-      .catch(() => {/* network error — keep current defaults */});
+      .catch(() => {/* network error — keep defaults */});
   }, []);
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        showToast({
+          type: 'warning',
+          title: 'File Too Large',
+          message: 'Please choose an image under 5MB.',
+        });
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        const dataUrl = reader.result as string;
+        setCustomAvatar(dataUrl);
+        localStorage.setItem('organlink_custom_avatar', dataUrl);
+        showToast({
+          type: 'success',
+          title: 'Profile Photo Updated',
+          message: 'Your profile photo has been updated successfully.',
+        });
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const handleSavePreferences = useCallback(async () => {
     const token = localStorage.getItem(JWT_KEY);
@@ -42,7 +74,7 @@ export default function HospitalProfilePage() {
       showToast({
         type: 'warning',
         title: 'Please Sign In First',
-        message: 'You need to log into your hospital account to save settings.',
+        message: 'You need to log in to save settings.',
       });
       return;
     }
@@ -86,78 +118,110 @@ export default function HospitalProfilePage() {
     }
   }, [urgentAlertsEnabled, soundAlertsEnabled, digestEnabled, showToast]);
 
+  const activeAvatar = customAvatar || currentHospital?.avatarUrl;
+
   return (
     <RoleGuard requiredRole="HOSPITAL_USER" requireVerifiedHospital={false}>
       <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
         {/* Header Breadcrumbs */}
         <div className="flex items-center gap-2 text-xs text-on-surface-variant mb-1">
-          <Link href="/dashboard" className="hover:underline">Dashboard</Link>
+          <Link href={isAdmin ? '/admin/queue' : '/dashboard'} className="hover:underline">
+            {isAdmin ? 'Admin Queue' : 'Dashboard'}
+          </Link>
           <span>/</span>
-          <span className="text-on-surface font-semibold">Hospital Profile & Settings</span>
+          <span className="text-on-surface font-semibold">
+            {isAdmin ? 'NOTTO Administrator Profile' : 'Hospital Profile & Settings'}
+          </span>
         </div>
 
         {/* Profile Header Card */}
         <div className="bg-surface-container-lowest rounded-3xl p-6 sm:p-8 border border-outline-variant/30 shadow-sm text-center relative overflow-hidden">
-          <div className="relative w-24 h-24 mx-auto rounded-full bg-surface-container-high overflow-hidden shadow-sm flex items-center justify-center mb-4 ring-4 ring-primary/20">
-            <img
-              alt="Profile"
-              src={currentHospital?.avatarUrl || 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=256'}
-              className="w-full h-full object-cover"
-            />
+          {/* Avatar Upload Container */}
+          <div className="relative w-24 h-24 mx-auto rounded-full bg-primary/10 overflow-hidden shadow-sm flex items-center justify-center mb-4 ring-4 ring-primary/20 group">
+            {activeAvatar ? (
+              <img alt="Profile" src={activeAvatar} className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex flex-col items-center justify-center bg-primary-container/30 text-primary">
+                <span className="material-symbols-outlined text-[48px]">
+                  {isAdmin ? 'admin_panel_settings' : 'domain'}
+                </span>
+              </div>
+            )}
+
+            {/* Photo Upload Overlay */}
+            <label className="absolute inset-0 bg-black/60 text-white opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center cursor-pointer text-[10px] font-semibold">
+              <span className="material-symbols-outlined text-[20px] mb-0.5">photo_camera</span>
+              <span>Upload Photo</span>
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            </label>
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">
-            {currentHospital?.name || 'Hospital Profile'}
+            {isAdmin ? 'Platform Admin (NOTTO Desk)' : currentHospital?.name || 'Registered Facility'}
           </h1>
 
           <p className="text-xs sm:text-sm text-on-surface-variant flex items-center justify-center gap-1.5 mt-1">
             <span className="material-symbols-outlined text-primary text-[18px]">verified</span>
-            <span>NOTTO Verified Transplant Center • Reg #{currentHospital?.licenseNumber || 'N/A'}</span>
+            <span>
+              {isAdmin
+                ? 'NOTTO National Governance & Accreditation Desk'
+                : `NOTTO Verified Center • Reg #${currentHospital?.licenseNumber || 'NOTTO-REG-2026'}`}
+            </span>
           </p>
 
           <div className="mt-6 pt-4 border-t border-outline-variant/20 flex flex-wrap justify-center gap-2 text-xs">
             <span className="bg-primary/10 text-primary font-bold px-3 py-1 rounded-full">
-              {currentHospital?.hospitalType?.replace(/_/g, ' ') || 'TRANSPLANT CENTER'}
+              {isAdmin ? 'SUPER ADMINISTRATOR' : currentHospital?.hospitalType?.replace(/_/g, ' ') || 'TRANSPLANT CENTER'}
             </span>
             <span className="bg-surface-container text-on-surface font-medium px-3 py-1 rounded-full">
-              {currentHospital?.city || 'City'}, {currentHospital?.state || 'State'}
+              {isAdmin ? 'New Delhi Headquarters' : `${currentHospital?.city || 'Bengaluru'}, ${currentHospital?.state || 'Karnataka'}`}
             </span>
             <span className="bg-secondary/10 text-secondary font-semibold px-3 py-1 rounded-full">
-              Verified Center
+              {isAdmin ? 'Full Network Access' : 'Verified Node'}
             </span>
           </div>
         </div>
 
-        {/* Section 1: Facility Details */}
+        {/* Section 1: Facility / User Details */}
         <div className="bg-surface-container-low rounded-3xl p-6 border border-outline-variant/30 shadow-2xs space-y-4">
           <div className="flex items-center justify-between pb-2 border-b border-outline-variant/20">
             <h2 className="text-xs font-bold uppercase tracking-wider text-primary">
-              Hospital & Registration Info
+              {isAdmin ? 'Administrator Credentials & Identity' : 'Hospital & Registration Info'}
             </h2>
-            <span className="text-[11px] text-on-surface-variant font-semibold">Active Accreditation</span>
+            <span className="text-[11px] text-on-surface-variant font-semibold">
+              {isAdmin ? 'Active System Role' : 'Active Accreditation'}
+            </span>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
             <div className="p-3.5 bg-surface-container-lowest rounded-xl border border-outline-variant/20">
               <span className="text-[10px] text-on-surface-variant uppercase font-bold block mb-1">
-                Registration Number
+                {isAdmin ? 'Official Email' : 'Registration Number'}
               </span>
-              <span className="text-sm font-mono font-bold text-on-surface">{currentHospital?.licenseNumber || 'N/A'}</span>
+              <span className="text-sm font-mono font-bold text-on-surface">
+                {isAdmin ? 'admin@organlink.demo' : currentHospital?.licenseNumber || 'NOTTO-REG-2026'}
+              </span>
             </div>
 
             <div className="p-3.5 bg-surface-container-lowest rounded-xl border border-outline-variant/20">
               <span className="text-[10px] text-on-surface-variant uppercase font-bold block mb-1">
-                Transplant Contact Person
+                {isAdmin ? 'Designation' : 'Transplant Contact Person'}
               </span>
-              <span className="text-sm font-semibold text-on-surface">{currentHospital?.adminContact?.name || 'Coordinator'}</span>
+              <span className="text-sm font-semibold text-on-surface">
+                {isAdmin ? 'National Governance Director' : currentHospital?.adminContact?.name || 'Chief Coordinator'}
+              </span>
             </div>
 
             <div className="p-3.5 bg-surface-container-lowest rounded-xl border border-outline-variant/20 sm:col-span-2">
               <span className="text-[10px] text-on-surface-variant uppercase font-bold block mb-1">
-                Hospital Address
+                {isAdmin ? 'Jurisdiction & Authority' : 'Hospital Address'}
               </span>
               <span className="text-xs font-medium text-on-surface">
-                {currentHospital?.address}, {currentHospital?.city}, {currentHospital?.state} - {currentHospital?.pincode}
+                {isAdmin
+                  ? 'National Organ & Tissue Transplant Organisation (NOTTO), Nirman Bhawan, New Delhi - 110011'
+                  : currentHospital
+                  ? `${currentHospital.address}, ${currentHospital.city}, ${currentHospital.state} - ${currentHospital.pincode}`
+                  : 'Medical Enclave District, Bengaluru, Karnataka - 560001'}
               </span>
             </div>
           </div>
@@ -179,7 +243,7 @@ export default function HospitalProfilePage() {
                 type="checkbox"
                 checked={urgentAlertsEnabled}
                 onChange={e => setUrgentAlertsEnabled(e.target.checked)}
-                className="w-4 h-4 accent-primary"
+                className="w-4 h-4 accent-primary cursor-pointer"
               />
             </label>
 
@@ -192,7 +256,7 @@ export default function HospitalProfilePage() {
                 type="checkbox"
                 checked={soundAlertsEnabled}
                 onChange={e => setSoundAlertsEnabled(e.target.checked)}
-                className="w-4 h-4 accent-primary"
+                className="w-4 h-4 accent-primary cursor-pointer"
               />
             </label>
 
@@ -205,7 +269,7 @@ export default function HospitalProfilePage() {
                 type="checkbox"
                 checked={digestEnabled}
                 onChange={e => setDigestEnabled(e.target.checked)}
-                className="w-4 h-4 accent-primary"
+                className="w-4 h-4 accent-primary cursor-pointer"
               />
             </label>
           </div>
@@ -214,7 +278,7 @@ export default function HospitalProfilePage() {
             <button
               onClick={handleSavePreferences}
               disabled={isSaving}
-              className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-2.5 px-6 rounded-full shadow-xs transition-all disabled:opacity-60 disabled:cursor-not-allowed"
+              className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-2.5 px-6 rounded-full shadow-xs transition-all disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {isSaving ? 'Saving…' : 'Save Preferences'}
             </button>

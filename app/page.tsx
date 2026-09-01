@@ -152,7 +152,7 @@ export default function RootHomePage() {
           <div className="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20 shadow-xs">
             <span className="material-symbols-outlined text-[32px]">favorite</span>
           </div>
-          <h1 className="text-2xl font-bold text-on-surface tracking-tight">LifeLink Authentication</h1>
+          <h1 className="text-2xl font-bold text-on-surface tracking-tight">OrganLink Authentication</h1>
           <p className="text-xs text-on-surface-variant mt-1.5 leading-relaxed">
             Sign in to access your Hospital Coordinator Portal or NOTTO Admin Governance Desk.
           </p>
@@ -226,7 +226,7 @@ export default function RootHomePage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 px-4 bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-6"
+            className="w-full py-3 px-4 bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-6 cursor-pointer"
           >
             {isLoading ? (
               <>
@@ -242,32 +242,8 @@ export default function RootHomePage() {
           </button>
         </form>
 
-        {/* Demo Quick Account Presets */}
-        <div className="mt-8 pt-6 border-t border-outline-variant/30">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block mb-3 text-center">
-            Instant Demo Account Presets
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            {DEMO_PRESETS.map(preset => (
-              <button
-                key={preset.email}
-                type="button"
-                onClick={() => applyPreset(preset)}
-                className="p-2.5 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-left transition-all group"
-              >
-                <div className="text-[11px] font-semibold text-on-surface group-hover:text-primary transition-colors truncate">
-                  {preset.label}
-                </div>
-                <div className="text-[9px] text-on-surface-variant font-mono truncate">
-                  {preset.email}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Footer Registration Link */}
-        <div className="mt-6 text-center text-xs text-on-surface-variant">
+        <div className="mt-8 text-center text-xs text-on-surface-variant">
           New Hospital?{' '}
           <Link href="/register" className="text-primary font-semibold hover:underline">
             Register Hospital Application

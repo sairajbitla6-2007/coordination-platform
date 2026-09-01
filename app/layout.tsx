@@ -6,7 +6,7 @@ import ToastContainer from '@/components/ToastContainer';
 import SimulationDrawer from '@/components/SimulationDrawer';
 
 export const metadata: Metadata = {
-  title: 'LifeLink - Digital Organ Donation & Transplant Coordination Platform',
+  title: 'OrganLink - Digital Organ Donation & Transplant Coordination Platform',
   description: 'Real-time organ donation, AI compatibility auto-matching, rapid transport tracking, and hospital verification system.',
 };
 
