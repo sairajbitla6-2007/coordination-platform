@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { usePlatform, JWT_KEY } from '@/lib/context/PlatformContext';
+import { usePlatform, JWT_KEY, STORAGE_KEY } from '@/lib/context/PlatformContext';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -24,13 +24,13 @@ export default function LoginPage() {
 
     if (isAdmin) {
       setCurrentRole('ADMIN');
-      localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
       showToast({ type: 'success', title: 'Welcome Back, Admin', message: 'Authenticated with Administrator Governance Privileges.' });
       router.push('/admin/queue');
     } else {
       setCurrentRole('HOSPITAL_USER');
       setCurrentHospitalId('hosp-metro-gen');
-      localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: 'hosp-metro-gen' }));
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: 'hosp-metro-gen' }));
       showToast({ type: 'success', title: 'Welcome, Hospital Coordinator', message: 'Hospital account authenticated successfully.' });
       router.push('/dashboard');
     }
@@ -69,13 +69,14 @@ export default function LoginPage() {
 
         if (user.role === 'ADMIN') {
           setCurrentRole('ADMIN');
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
           showToast({ type: 'success', title: 'Welcome Back, Admin', message: 'Authenticated with Administrator Governance Privileges.' });
           router.push('/admin/queue');
         } else {
           setCurrentRole('HOSPITAL_USER');
           const hospId = user.hospital_id || 'hosp-metro-gen';
           setCurrentHospitalId(hospId);
-          localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: hospId }));
+          localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: hospId }));
           showToast({ type: 'success', title: `Welcome, ${user.full_name || 'Coordinator'}`, message: 'Hospital account authenticated successfully.' });
           router.push('/dashboard');
         }

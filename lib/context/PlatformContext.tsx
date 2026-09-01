@@ -416,7 +416,7 @@ interface PlatformContextType {
 
 const PlatformContext = createContext<PlatformContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'lifelink_platform_state_v1';
+export const STORAGE_KEY = 'lifelink_platform_state_v2';
 
 // ─────────────────────────────────────────────────────────────────
 // Provider
@@ -559,6 +559,13 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const token = getToken();
 
+    // Clear legacy v1 state to purge old mock data
+    try {
+      localStorage.removeItem('lifelink_platform_state_v1');
+    } catch {
+      // Ignore
+    }
+
     // Restore lightweight UI state from localStorage
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -567,14 +574,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         if (parsed.currentRole) setCurrentRole(parsed.currentRole);
         if (parsed.currentHospitalId) setCurrentHospitalId(parsed.currentHospitalId);
         if (parsed.simulatedTimeOffsetMinutes) setSimulatedTimeOffsetMinutes(parsed.simulatedTimeOffsetMinutes);
-        // Only fall back to saved entity data if no JWT present
-        if (!token) {
-          if (parsed.hospitals) setHospitals(parsed.hospitals);
-          if (parsed.listings) setListings(parsed.listings);
-          if (parsed.matches) setMatches(parsed.matches);
-          if (parsed.transports) setTransports(parsed.transports);
-          if (parsed.notifications) setNotifications(parsed.notifications);
-        }
       }
     } catch (e) {
       console.warn('Failed to load state from localStorage', e);
