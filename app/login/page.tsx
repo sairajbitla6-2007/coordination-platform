@@ -7,42 +7,6 @@ import { usePlatform, JWT_KEY } from '@/lib/context/PlatformContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-// Demo quick-presets for testing login with real seed credentials
-const DEMO_PRESETS = [
-  {
-    label: 'Metro General (Donor)',
-    email: 'priya.sharma@metrogeneral.med.in',
-    password: 'MetroDemo@2024',
-    role: 'HOSPITAL_USER' as const,
-    hospId: '11111111-0001-0001-0001-000000000001',
-    badge: 'Donor Center',
-  },
-  {
-    label: 'St. Jude (Recipient)',
-    email: 'rajiv.menon@stjudeheart.org',
-    password: 'StJudeDemo@2024',
-    role: 'HOSPITAL_USER' as const,
-    hospId: '11111111-0002-0002-0002-000000000002',
-    badge: 'Recipient Center',
-  },
-  {
-    label: 'Apollo Multi-Specialty',
-    email: 'ananya.ray@apollo.org',
-    password: 'ApolloDemo@2024',
-    role: 'HOSPITAL_USER' as const,
-    hospId: '11111111-0003-0003-0003-000000000003',
-    badge: 'Transplant Center',
-  },
-  {
-    label: 'NOTTO Admin Desk',
-    email: 'admin@organlink.demo',
-    password: 'AdminDemo@2024',
-    role: 'ADMIN' as const,
-    hospId: '',
-    badge: 'Governance',
-  },
-];
-
 export default function LoginPage() {
   const router = useRouter();
   const { setCurrentRole, setCurrentHospitalId, showToast } = usePlatform();
@@ -105,12 +69,6 @@ export default function LoginPage() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const applyPreset = (preset: (typeof DEMO_PRESETS)[0]) => {
-    setEmail(preset.email);
-    setPassword(preset.password);
-    setErrorMessage('');
   };
 
   return (
@@ -198,7 +156,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full py-3 px-4 bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-6"
+            className="w-full py-3 px-4 bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs rounded-xl shadow-md transition-all flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed mt-6 cursor-pointer"
           >
             {isLoading ? (
               <>
@@ -214,32 +172,8 @@ export default function LoginPage() {
           </button>
         </form>
 
-        {/* Demo Credentials Quick Switcher */}
-        <div className="mt-8 pt-6 border-t border-outline-variant/30">
-          <span className="text-[10px] font-bold uppercase tracking-wider text-on-surface-variant block mb-3 text-center">
-            Quick Demo Presets
-          </span>
-          <div className="grid grid-cols-2 gap-2">
-            {DEMO_PRESETS.map(preset => (
-              <button
-                key={preset.email}
-                type="button"
-                onClick={() => applyPreset(preset)}
-                className="p-2 rounded-xl bg-surface-container hover:bg-surface-container-high border border-outline-variant/30 text-left transition-all group"
-              >
-                <div className="text-[11px] font-semibold text-on-surface group-hover:text-primary transition-colors truncate">
-                  {preset.label}
-                </div>
-                <div className="text-[9px] text-on-surface-variant font-mono truncate">
-                  {preset.email}
-                </div>
-              </button>
-            ))}
-          </div>
-        </div>
-
         {/* Footer Register Link */}
-        <div className="mt-6 text-center text-xs text-on-surface-variant">
+        <div className="mt-8 text-center text-xs text-on-surface-variant">
           Don&apos;t have an account?{' '}
           <Link href="/register" className="text-primary font-semibold hover:underline">
             Register Hospital
