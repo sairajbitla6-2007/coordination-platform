@@ -574,6 +574,10 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         if (parsed.currentRole) setCurrentRole(parsed.currentRole);
         if (parsed.currentHospitalId) setCurrentHospitalId(parsed.currentHospitalId);
         if (parsed.simulatedTimeOffsetMinutes) setSimulatedTimeOffsetMinutes(parsed.simulatedTimeOffsetMinutes);
+        if (!token && parsed.hospitals && Array.isArray(parsed.hospitals)) {
+          setHospitals(parsed.hospitals);
+          hospitalsRef.current = parsed.hospitals;
+        }
       }
     } catch (e) {
       console.warn('Failed to load state from localStorage', e);

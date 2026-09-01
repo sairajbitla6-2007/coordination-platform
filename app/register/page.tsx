@@ -317,27 +317,15 @@ export default function HospitalRegistrationPage() {
                 <label className="block text-[11px] font-medium text-on-surface-variant mb-1">
                   Confirm Password *
                 </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    required
-                    minLength={6}
-                    value={confirmPassword}
-                    onChange={e => setConfirmPassword(e.target.value)}
-                    placeholder="Re-enter password"
-                    className="w-full pl-3 pr-10 py-2.5 bg-surface-container-low rounded-xl border border-outline-variant/40 text-xs sm:text-sm text-on-surface focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
-                    aria-label={showPassword ? 'Hide passwords' : 'Show passwords'}
-                  >
-                    <span className="material-symbols-outlined text-[18px]">
-                      {showPassword ? 'visibility_off' : 'visibility'}
-                    </span>
-                  </button>
-                </div>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Re-enter password"
+                  className="w-full px-3 py-2.5 bg-surface-container-low rounded-xl border border-outline-variant/40 text-xs sm:text-sm text-on-surface focus:outline-none"
+                />
               </div>
             </div>
           </div>
