@@ -7,19 +7,25 @@ import { usePlatform } from '@/lib/context/PlatformContext';
 
 export default function PendingReviewPage() {
   const router = useRouter();
-  const { currentHospital, logout, showToast } = usePlatform();
+  const { currentHospital, currentHospitalId, hospitals, logout, showToast } = usePlatform();
+
+  // Effective active hospital (resolves currentHospital, ID match, or newest registered)
+  const activeHospital =
+    currentHospital ||
+    hospitals.find(h => h.id === currentHospitalId) ||
+    hospitals[hospitals.length - 1];
 
   // Auto-detect Admin verification approval in real-time and transition to dashboard
   useEffect(() => {
-    if (currentHospital?.status === 'VERIFIED') {
+    if (activeHospital?.status === 'VERIFIED') {
       showToast({
         type: 'success',
         title: 'Accreditation Approved!',
-        message: 'Administrator has verified your facility. Opening Hospital Coordination Portal...'
+        message: `${activeHospital.name} has been verified. Opening Hospital Coordination Portal...`
       });
       router.push('/dashboard');
     }
-  }, [currentHospital?.status, router, showToast]);
+  }, [activeHospital?.status, activeHospital?.name, router, showToast]);
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
@@ -52,18 +58,18 @@ export default function PendingReviewPage() {
 
         <p className="text-xs sm:text-sm text-on-surface-variant mb-6 max-w-md leading-relaxed">
           Compliance officers are currently verifying the credentials and OT accreditation for{' '}
-          <strong className="text-on-surface">{currentHospital?.name || 'your hospital'}</strong>.
+          <strong className="text-on-surface">{activeHospital?.name || 'your hospital'}</strong>.
         </p>
 
         {/* Hospital Application Summary Card */}
         <div className="w-full bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/30 text-left text-xs mb-8 space-y-2.5">
           <div className="flex justify-between items-center pb-2 border-b border-outline-variant/20">
             <span className="text-on-surface-variant font-medium">Application Reference:</span>
-            <span className="font-mono font-bold text-on-surface">{currentHospital?.licenseNumber || 'APPL-REG-2026'}</span>
+            <span className="font-mono font-bold text-on-surface">{activeHospital?.licenseNumber || 'APPL-REG-2026'}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-on-surface-variant font-medium">Transplant Lead:</span>
-            <span className="font-semibold text-on-surface">{currentHospital?.adminContact.name || 'Coordinator'}</span>
+            <span className="font-semibold text-on-surface">{activeHospital?.adminContact?.name || 'Coordinator'}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-on-surface-variant font-medium">Facility Type:</span>
@@ -79,7 +85,7 @@ export default function PendingReviewPage() {
         <div className="w-full flex flex-col gap-3">
           <button
             onClick={() => logout && logout()}
-            className="w-full bg-surface-container-high hover:bg-surface-dim text-on-surface font-semibold text-xs py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2"
+            className="w-full bg-surface-container-high hover:bg-surface-dim text-on-surface font-semibold text-xs py-3 px-4 rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer"
           >
             <span className="material-symbols-outlined text-[18px]">logout</span>
             Sign Out of Account

@@ -416,7 +416,7 @@ interface PlatformContextType {
 
 const PlatformContext = createContext<PlatformContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'lifelink_platform_state_v1';
+export const STORAGE_KEY = 'lifelink_platform_state_v2';
 
 // ─────────────────────────────────────────────────────────────────
 // Provider
@@ -489,8 +489,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
 
     const combined = [...organListings, ...recipientListings];
-    if (combined.length > 0) setListings(combined);
-    return combined;
+    const uniqueMap = new Map<string, Listing>();
+    combined.forEach(item => {
+      if (item && item.id && !uniqueMap.has(item.id)) {
+        uniqueMap.set(item.id, item);
+      }
+    });
+    const deduplicated = Array.from(uniqueMap.values());
+    if (deduplicated.length > 0) setListings(deduplicated);
+    return deduplicated;
   }, []);
 
   const fetchMatches = useCallback(async (currentListings: Listing[]) => {
@@ -552,6 +559,13 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const token = getToken();
 
+    // Clear legacy v1 state to purge old mock data
+    try {
+      localStorage.removeItem('lifelink_platform_state_v1');
+    } catch {
+      // Ignore
+    }
+
     // Restore lightweight UI state from localStorage
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -560,13 +574,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         if (parsed.currentRole) setCurrentRole(parsed.currentRole);
         if (parsed.currentHospitalId) setCurrentHospitalId(parsed.currentHospitalId);
         if (parsed.simulatedTimeOffsetMinutes) setSimulatedTimeOffsetMinutes(parsed.simulatedTimeOffsetMinutes);
-        // Only fall back to saved entity data if no JWT present
-        if (!token) {
-          if (parsed.hospitals) setHospitals(parsed.hospitals);
-          if (parsed.listings) setListings(parsed.listings);
-          if (parsed.matches) setMatches(parsed.matches);
-          if (parsed.transports) setTransports(parsed.transports);
-          if (parsed.notifications) setNotifications(parsed.notifications);
+        if (!token && parsed.hospitals && Array.isArray(parsed.hospitals)) {
+          setHospitals(parsed.hospitals);
+          hospitalsRef.current = parsed.hospitals;
         }
       }
     } catch (e) {
@@ -587,7 +597,29 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       }
     }, 5000);
 
-    return () => clearInterval(pollInterval);
+    // Cross-tab real-time sync for demo state updates (e.g. Admin approval in another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed.hospitals && Array.isArray(parsed.hospitals)) {
+            setHospitals(parsed.hospitals);
+            hospitalsRef.current = parsed.hospitals;
+          }
+          if (parsed.listings && Array.isArray(parsed.listings)) setListings(parsed.listings);
+          if (parsed.matches && Array.isArray(parsed.matches)) setMatches(parsed.matches);
+          if (parsed.transports && Array.isArray(parsed.transports)) setTransports(parsed.transports);
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Save lightweight UI state to localStorage ───────────────────
@@ -737,11 +769,22 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         documents: data.documents || [],
         status: 'PENDING_REVIEW',
       };
-      setHospitals(prev => [...prev, newHospital]);
+      setHospitals(prev => {
+        const next = [...prev, newHospital];
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          const parsed = saved ? JSON.parse(saved) : {};
+          parsed.hospitals = next;
+          parsed.currentHospitalId = newId;
+          parsed.currentRole = 'HOSPITAL_USER';
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        } catch {}
+        return next;
+      });
       setCurrentHospitalId(newId);
       setCurrentRole('HOSPITAL_USER');
-      setNotifications(prev => [{ id: 'notif-' + Date.now(), targetRole: 'ADMIN', title: 'New Hospital Registration Pending', message: `${newHospital.name} has submitted an application for NOTTO accreditation.`, type: 'REGISTRATION_STATUS', timestamp: new Date().toISOString(), read: false, link: '/admin/queue' }, ...prev]);
-      showToast({ type: 'info', title: 'Registration Submitted', message: 'Your application is under review by the NOTTO admin team.' });
+      setNotifications(prev => [{ id: 'notif-' + Date.now(), targetRole: 'ADMIN', title: 'New Hospital Registration Pending', message: `${newHospital.name} has submitted an application for accreditation review.`, type: 'REGISTRATION_STATUS', timestamp: new Date().toISOString(), read: false, link: '/admin/queue' }, ...prev]);
+      showToast({ type: 'info', title: 'Registration Submitted', message: 'Your application is under review by compliance officers.' });
       return newHospital;
     },
     [fetchHospitals, fetchNotifications, showToast]
@@ -762,8 +805,19 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Demo fallback
-      setHospitals(prev => prev.map(h => h.id === hospitalId ? { ...h, status: 'VERIFIED' as const, verifiedAt: new Date().toISOString() } : h));
+      // Demo fallback - update hospitals state and persist directly to localStorage for instant cross-tab sync
+      setHospitals(prev => {
+        const nextHospitals = prev.map(h => h.id === hospitalId ? { ...h, status: 'VERIFIED' as const, verifiedAt: new Date().toISOString() } : h);
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          const parsed = saved ? JSON.parse(saved) : {};
+          parsed.hospitals = nextHospitals;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        } catch (e) {
+          console.warn('Failed to sync approved hospital to localStorage', e);
+        }
+        return nextHospitals;
+      });
       showToast({ type: 'success', title: 'Hospital Approved', message: `${targetHospital?.name || 'Hospital'} has been verified.` });
       setNotifications(prev => [{ id: 'notif-' + Date.now(), hospitalId, title: 'Hospital Registration Approved', message: 'Congratulations! Your hospital accreditation is verified.', type: 'REGISTRATION_STATUS', timestamp: new Date().toISOString(), read: false, link: '/dashboard' }, ...prev]);
     },

@@ -127,16 +127,26 @@ export function findMatchesForListing(
   const targetOrganNorm = normalizeOrgan(targetListing.organType);
   const isActiveStatus = (s: string) => ['ACTIVE', 'AVAILABLE', 'ACTIVE_POOL', 'PENDING'].includes(String(s || '').toUpperCase());
 
+  // Deduplicate input listings by ID and content signature
+  const uniqueListingsMap = new Map<string, Listing>();
+  for (const l of allListings) {
+    if (!l || !l.id) continue;
+    if (!uniqueListingsMap.has(l.id)) {
+      uniqueListingsMap.set(l.id, l);
+    }
+  }
+  const deduplicatedListings = Array.from(uniqueListingsMap.values());
+
   if (targetListing.type === 'DONOR') {
     // Find recipient candidates
-    const recipients = allListings.filter(
+    const recipients = deduplicatedListings.filter(
       l => l.type === 'RECIPIENT' &&
            normalizeOrgan(l.organType) === targetOrganNorm &&
            isActiveStatus(l.status) &&
            l.id !== targetListing.id
     );
 
-    const candidates: MatchCandidate[] = [];
+    const rawCandidates: MatchCandidate[] = [];
 
     for (const rec of recipients) {
       const bloodCompat = isBloodCompatible(targetListing.bloodType, rec.bloodType);
@@ -186,7 +196,7 @@ export function findMatchesForListing(
         viabilityFeasible
       };
 
-      candidates.push({
+      rawCandidates.push({
         recipientListing: rec,
         compatibilityScore: compositeScore,
         distanceKm: distance,
@@ -196,22 +206,36 @@ export function findMatchesForListing(
       });
     }
 
-    candidates.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
-    candidates.forEach((c, idx) => {
+    // Deduplicate candidates by recipient ID AND content signature
+    const seenRecIds = new Set<string>();
+    const seenContentKeys = new Set<string>();
+    const finalCandidates: MatchCandidate[] = [];
+    for (const c of rawCandidates) {
+      const rec = c.recipientListing;
+      const contentKey = `${(rec.hospitalName || '').toLowerCase().trim()}_${rec.organType}_${rec.bloodType}_${rec.donorAge || rec.recipientAge || ''}_${rec.donorGender || rec.recipientGender || ''}`;
+      if (!seenRecIds.has(rec.id) && !seenContentKeys.has(contentKey)) {
+        seenRecIds.add(rec.id);
+        seenContentKeys.add(contentKey);
+        finalCandidates.push(c);
+      }
+    }
+
+    finalCandidates.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+    finalCandidates.forEach((c, idx) => {
       c.rank = idx + 1;
     });
 
-    return candidates;
+    return finalCandidates;
   } else {
     // If target is Recipient, find Donor candidates
-    const donors = allListings.filter(
+    const donors = deduplicatedListings.filter(
       l => l.type === 'DONOR' &&
            normalizeOrgan(l.organType) === targetOrganNorm &&
            isActiveStatus(l.status) &&
            l.id !== targetListing.id
     );
 
-    const candidates: MatchCandidate[] = [];
+    const rawCandidates: MatchCandidate[] = [];
 
     for (const donor of donors) {
       const bloodCompat = isBloodCompatible(donor.bloodType, targetListing.bloodType);
@@ -243,7 +267,7 @@ export function findMatchesForListing(
         )
       );
 
-      candidates.push({
+      rawCandidates.push({
         recipientListing: donor, // Matching donor organ listing
         compatibilityScore: compositeScore,
         distanceKm: distance,
@@ -259,11 +283,25 @@ export function findMatchesForListing(
       });
     }
 
-    candidates.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
-    candidates.forEach((c, idx) => {
+    // Deduplicate candidates by donor ID AND content signature
+    const seenDonorIds = new Set<string>();
+    const seenContentKeys = new Set<string>();
+    const finalCandidates: MatchCandidate[] = [];
+    for (const c of rawCandidates) {
+      const donor = c.recipientListing;
+      const contentKey = `${(donor.hospitalName || '').toLowerCase().trim()}_${donor.organType}_${donor.bloodType}_${donor.donorAge || donor.recipientAge || ''}_${donor.donorGender || donor.recipientGender || ''}`;
+      if (!seenDonorIds.has(donor.id) && !seenContentKeys.has(contentKey)) {
+        seenDonorIds.add(donor.id);
+        seenContentKeys.add(contentKey);
+        finalCandidates.push(c);
+      }
+    }
+
+    finalCandidates.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+    finalCandidates.forEach((c, idx) => {
       c.rank = idx + 1;
     });
 
-    return candidates;
+    return finalCandidates;
   }
 }
