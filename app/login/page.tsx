@@ -1,34 +1,19 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePlatform, JWT_KEY } from '@/lib/context/PlatformContext';
 
-export default function RootHomePage() {
+export default function LoginPage() {
   const router = useRouter();
-  const { currentRole, setCurrentRole, setCurrentHospitalId, showToast } = usePlatform();
+  const { setCurrentRole, setCurrentHospitalId, showToast } = usePlatform();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-
-  // If already authenticated, automatically route to respective panel
-  useEffect(() => {
-    const token = localStorage.getItem(JWT_KEY);
-    if (token) {
-      if (currentRole === 'ADMIN') {
-        router.replace('/admin/queue');
-      } else {
-        router.replace('/dashboard');
-      }
-    } else {
-      setIsCheckingAuth(false);
-    }
-  }, [currentRole, router]);
 
   const doFallbackLogin = (emailVal: string, passwordVal: string) => {
     const cleanEmail = emailVal.toLowerCase().trim();
@@ -40,13 +25,13 @@ export default function RootHomePage() {
     if (isAdmin) {
       setCurrentRole('ADMIN');
       localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
-      showToast({ type: 'success', title: 'Authenticated as Platform Admin', message: 'Accessing Governance & Accreditation Panel.' });
+      showToast({ type: 'success', title: 'Welcome Back, Admin', message: 'Authenticated with Administrator Governance Privileges.' });
       router.push('/admin/queue');
     } else {
       setCurrentRole('HOSPITAL_USER');
       setCurrentHospitalId('hosp-metro-gen');
       localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: 'hosp-metro-gen' }));
-      showToast({ type: 'success', title: 'Welcome, Hospital Coordinator', message: 'Hospital Portal Authenticated Successfully.' });
+      showToast({ type: 'success', title: 'Welcome, Hospital Coordinator', message: 'Hospital account authenticated successfully.' });
       router.push('/dashboard');
     }
   };
@@ -84,15 +69,14 @@ export default function RootHomePage() {
 
         if (user.role === 'ADMIN') {
           setCurrentRole('ADMIN');
-          localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
-          showToast({ type: 'success', title: 'Authenticated as Platform Admin', message: 'Accessing Governance & Accreditation Panel.' });
+          showToast({ type: 'success', title: 'Welcome Back, Admin', message: 'Authenticated with Administrator Governance Privileges.' });
           router.push('/admin/queue');
         } else {
           setCurrentRole('HOSPITAL_USER');
           const hospId = user.hospital_id || 'hosp-metro-gen';
           setCurrentHospitalId(hospId);
           localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: hospId }));
-          showToast({ type: 'success', title: `Welcome, ${user.full_name || 'Coordinator'}`, message: 'Hospital Portal Authenticated Successfully.' });
+          showToast({ type: 'success', title: `Welcome, ${user.full_name || 'Coordinator'}`, message: 'Hospital account authenticated successfully.' });
           router.push('/dashboard');
         }
       } else {
@@ -105,31 +89,20 @@ export default function RootHomePage() {
     }
   };
 
-  if (isCheckingAuth) {
-    return (
-      <div className="min-h-[80vh] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-          <span className="text-xs text-on-surface-variant font-medium">Checking authentication session...</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-[85vh] flex flex-col justify-center items-center px-4 py-12 relative">
-      {/* Background Radial Glow */}
-      <div className="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-primary/10 rounded-full blur-3xl pointer-events-none" />
+      {/* Glow Effects */}
+      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-96 h-96 bg-primary/10 rounded-full blur-3xl pointer-events-none" />
 
-      <div className="w-full max-w-md bg-surface-container-lowest/95 backdrop-blur-xl rounded-3xl border border-outline-variant/40 shadow-xl p-8 relative z-10">
+      <div className="w-full max-w-md bg-surface-container-lowest/90 backdrop-blur-xl rounded-3xl border border-outline-variant/40 shadow-xl p-8 relative z-10">
         {/* Header Branding */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 bg-primary/10 text-primary rounded-2xl flex items-center justify-center mx-auto mb-4 border border-primary/20 shadow-xs">
-            <span className="material-symbols-outlined text-[32px]">favorite</span>
+            <span className="material-symbols-outlined text-[32px]">lock</span>
           </div>
-          <h1 className="text-2xl font-bold text-on-surface tracking-tight">OrganLink Authentication</h1>
+          <h1 className="text-2xl font-bold text-on-surface tracking-tight">Hospital Staff Login</h1>
           <p className="text-xs text-on-surface-variant mt-1.5 leading-relaxed">
-            Sign in to access your Hospital Coordinator Portal or Governance Desk.
+            Access your secure hospital portal, organ matching pool, & real-time logistics.
           </p>
         </div>
 
@@ -158,7 +131,7 @@ export default function RootHomePage() {
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="coordinator@hospital.org"
+                placeholder="priya.sharma@metrogeneral.med.in"
                 className="w-full pl-10 pr-4 py-2.5 text-xs bg-surface-container border border-outline-variant/40 rounded-xl text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
               />
             </div>
@@ -206,7 +179,7 @@ export default function RootHomePage() {
             {isLoading ? (
               <>
                 <span className="w-4 h-4 border-2 border-on-primary border-t-transparent rounded-full animate-spin" />
-                Authenticating...
+                Authenticating Account...
               </>
             ) : (
               <>
@@ -217,7 +190,7 @@ export default function RootHomePage() {
           </button>
         </form>
 
-        {/* Footer Registration Link */}
+        {/* Footer Link */}
         <div className="mt-8 text-center text-xs text-on-surface-variant">
           New Hospital?{' '}
           <Link href="/register" className="text-primary font-semibold hover:underline">

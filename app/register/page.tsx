@@ -9,28 +9,35 @@ export default function HospitalRegistrationPage() {
   const router = useRouter();
   const { registerHospital } = usePlatform();
 
-  const [name, setName] = useState('Memorial Regional Transplant Center');
-  const [licenseNumber, setLicenseNumber] = useState('NOTTO-KA-2026-9921');
+  const [name, setName] = useState('');
+  const [licenseNumber, setLicenseNumber] = useState('');
   const [hospitalType, setHospitalType] = useState<'TRANSPLANT_CENTER' | 'RECOVERY_CENTER' | 'SPECIALTY_HOSPITAL'>('TRANSPLANT_CENTER');
-  const [address, setAddress] = useState('44 Medical Innovation Campus, Outer Ring Road');
-  const [city, setCity] = useState('Bengaluru');
-  const [state, setState] = useState('Karnataka');
-  const [pincode, setPincode] = useState('560103');
+  const [address, setAddress] = useState('');
+  const [city, setCity] = useState('');
+  const [state, setState] = useState('');
+  const [pincode, setPincode] = useState('');
 
-  const [contactName, setContactName] = useState('Dr. Sanjay Varma, MS, MCh');
-  const [contactEmail, setContactEmail] = useState('sanjay.varma@memorialhealth.org');
-  const [contactPhone, setContactPhone] = useState('+91 98451 22334');
-  const [contactDesignation, setContactDesignation] = useState('Transplant Director');
+  const [contactName, setContactName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactPhone, setContactPhone] = useState('');
+  const [contactDesignation, setContactDesignation] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [passwordError, setPasswordError] = useState('');
 
-  const [files, setFiles] = useState<{ name: string; size: string }[]>([
-    { name: 'NOTTO_Facility_Licensing_Application.pdf', size: '2.4 MB' },
-    { name: 'NABH_Accreditation_Certificate.pdf', size: '1.8 MB' }
-  ]);
+  const [files, setFiles] = useState<{ name: string; size: string }[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (password !== confirmPassword) {
+      setPasswordError('Passwords do not match.');
+      return;
+    }
+    setPasswordError('');
     setIsSubmitting(true);
 
     try {
@@ -48,6 +55,7 @@ export default function HospitalRegistrationPage() {
           phone: contactPhone,
           designation: contactDesignation
         },
+        adminPassword: password,
         documents: files.map((f, idx) => ({
           id: `doc-${idx + 1}`,
           name: f.name,
@@ -55,7 +63,7 @@ export default function HospitalRegistrationPage() {
           size: f.size,
           uploadedAt: new Date().toISOString()
         }))
-      });
+      } as any);
 
       router.push('/pending-review');
     } catch (err) {
@@ -273,6 +281,69 @@ export default function HospitalRegistrationPage() {
               />
             </div>
           </div>
+
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="text-xs font-semibold text-on-surface">
+                Account Security Passwords <span className="text-error">*</span>
+              </label>
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="text-xs font-semibold text-primary hover:underline flex items-center gap-1"
+              >
+                <span className="material-symbols-outlined text-[16px]">
+                  {showPassword ? 'visibility_off' : 'visibility'}
+                </span>
+                <span>{showPassword ? 'Hide Passwords' : 'Show Passwords'}</span>
+              </button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div>
+                <label className="block text-[11px] font-medium text-on-surface-variant mb-1">
+                  Account Password *
+                </label>
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Create secure password"
+                  className="w-full px-3 py-2.5 bg-surface-container-low rounded-xl border border-outline-variant/40 text-xs sm:text-sm text-on-surface focus:outline-none"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-medium text-on-surface-variant mb-1">
+                  Confirm Password *
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    minLength={6}
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    placeholder="Re-enter password"
+                    className="w-full pl-3 pr-10 py-2.5 bg-surface-container-low rounded-xl border border-outline-variant/40 text-xs sm:text-sm text-on-surface focus:outline-none"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-on-surface-variant hover:text-on-surface transition-colors"
+                    aria-label={showPassword ? 'Hide passwords' : 'Show passwords'}
+                  >
+                    <span className="material-symbols-outlined text-[18px]">
+                      {showPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          {passwordError && (
+            <p className="text-xs font-semibold text-error mt-1">{passwordError}</p>
+          )}
         </div>
 
         {/* Section 3: Document Uploads */}

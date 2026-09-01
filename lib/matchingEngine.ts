@@ -62,33 +62,60 @@ export function estimateTransitTimeMinutes(distanceKm: number): number {
   }
 }
 
-export function isBloodCompatible(donorBlood: BloodType, recipientBlood: BloodType): boolean {
-  const allowed = ABO_COMPATIBILITY[donorBlood] || [];
-  return allowed.includes(recipientBlood);
+export function normalizeBlood(blood: string): BloodType {
+  if (!blood) return 'O+';
+  let clean = String(blood).replace(/^Blood\s+/i, '').replace(/_/g, '').trim().toUpperCase();
+  if (clean === 'APOSITIVE' || clean === 'A+') return 'A+';
+  if (clean === 'ANEGATIVE' || clean === 'A-') return 'A-';
+  if (clean === 'BPOSITIVE' || clean === 'B+') return 'B+';
+  if (clean === 'BNEGATIVE' || clean === 'B-') return 'B-';
+  if (clean === 'ABPOSITIVE' || clean === 'AB+') return 'AB+';
+  if (clean === 'ABNEGATIVE' || clean === 'AB-') return 'AB-';
+  if (clean === 'OPOSITIVE' || clean === 'O+') return 'O+';
+  if (clean === 'ONEGATIVE' || clean === 'O-') return 'O-';
+  return clean as BloodType;
+}
+
+export function isBloodCompatible(donorBlood: string, recipientBlood: string): boolean {
+  const normDonor = normalizeBlood(donorBlood);
+  const normRecipient = normalizeBlood(recipientBlood);
+  const allowed = ABO_COMPATIBILITY[normDonor] || [normDonor];
+  return allowed.includes(normRecipient) || normDonor === normRecipient;
+}
+
+export function normalizeOrgan(organ: string): string {
+  return String(organ || '').trim().toUpperCase();
 }
 
 // Calculate HLA match score (0 - 100%)
 export function calculateHLAScore(donorHLA: Listing['hlaTyping'], recipientHLA: Listing['hlaTyping']): number {
+  if (!donorHLA || !recipientHLA) return 85;
+
+  const getArray = (arr: any) => (Array.isArray(arr) ? arr.map(x => String(x).trim().toUpperCase()) : []);
+  const donorA = getArray(donorHLA.a);
+  const recipientA = getArray(recipientHLA.a);
+  const donorB = getArray(donorHLA.b);
+  const recipientB = getArray(recipientHLA.b);
+  const donorDR = getArray(donorHLA.dr);
+  const recipientDR = getArray(recipientHLA.dr);
+
   let matchedCount = 0;
   let totalCompared = 0;
 
-  // Locus A
-  if (donorHLA.a && recipientHLA.a) {
-    totalCompared += 2;
-    matchedCount += donorHLA.a.filter(allele => recipientHLA.a.includes(allele)).length;
+  if (donorA.length > 0 && recipientA.length > 0) {
+    totalCompared += donorA.length;
+    matchedCount += donorA.filter(allele => recipientA.includes(allele)).length;
   }
-  // Locus B
-  if (donorHLA.b && recipientHLA.b) {
-    totalCompared += 2;
-    matchedCount += donorHLA.b.filter(allele => recipientHLA.b.includes(allele)).length;
+  if (donorB.length > 0 && recipientB.length > 0) {
+    totalCompared += donorB.length;
+    matchedCount += donorB.filter(allele => recipientB.includes(allele)).length;
   }
-  // Locus DR
-  if (donorHLA.dr && recipientHLA.dr) {
-    totalCompared += 2;
-    matchedCount += donorHLA.dr.filter(allele => recipientHLA.dr.includes(allele)).length;
+  if (donorDR.length > 0 && recipientDR.length > 0) {
+    totalCompared += donorDR.length;
+    matchedCount += donorDR.filter(allele => recipientDR.includes(allele)).length;
   }
 
-  if (totalCompared === 0) return 80; // default baseline
+  if (totalCompared === 0) return 85;
   const score = Math.round((Math.min(matchedCount, totalCompared) / totalCompared) * 100);
   return Math.max(50, score);
 }
@@ -97,13 +124,29 @@ export function findMatchesForListing(
   targetListing: Listing,
   allListings: Listing[]
 ): MatchCandidate[] {
+  const targetOrganNorm = normalizeOrgan(targetListing.organType);
+  const isActiveStatus = (s: string) => ['ACTIVE', 'AVAILABLE', 'ACTIVE_POOL', 'PENDING'].includes(String(s || '').toUpperCase());
+
+  // Deduplicate input listings by ID and content signature
+  const uniqueListingsMap = new Map<string, Listing>();
+  for (const l of allListings) {
+    if (!l || !l.id) continue;
+    if (!uniqueListingsMap.has(l.id)) {
+      uniqueListingsMap.set(l.id, l);
+    }
+  }
+  const deduplicatedListings = Array.from(uniqueListingsMap.values());
+
   if (targetListing.type === 'DONOR') {
     // Find recipient candidates
-    const recipients = allListings.filter(
-      l => l.type === 'RECIPIENT' && l.organType === targetListing.organType && l.status === 'ACTIVE'
+    const recipients = deduplicatedListings.filter(
+      l => l.type === 'RECIPIENT' &&
+           normalizeOrgan(l.organType) === targetOrganNorm &&
+           isActiveStatus(l.status) &&
+           l.id !== targetListing.id
     );
 
-    const candidates: MatchCandidate[] = [];
+    const rawCandidates: MatchCandidate[] = [];
 
     for (const rec of recipients) {
       const bloodCompat = isBloodCompatible(targetListing.bloodType, rec.bloodType);
@@ -119,27 +162,21 @@ export function findMatchesForListing(
         const remainingMs = new Date(targetListing.viabilityDeadline).getTime() - Date.now();
         const remainingMinutes = remainingMs / 60000;
         if (remainingMinutes < transitMin + 30) {
-          // Transit would exceed or dangerously cut close to remaining cold ischemia time
           viabilityFeasible = false;
         }
       }
 
-      // Distance score (closer = higher score, e.g. <50km = 100, 500km = 60)
       const distanceScore = Math.max(40, Math.round(100 - (distance / 600) * 50));
 
-      // Urgency boost
       let urgencyScore = 70;
       if (rec.urgencyLevel === '1A_CRITICAL') urgencyScore = 100;
       else if (rec.urgencyLevel === '1B_URGENT') urgencyScore = 85;
 
-      // Waiting time bonus (longer wait = slight tie-breaker boost)
       const daysWaiting = rec.waitingSince
         ? Math.floor((Date.now() - new Date(rec.waitingSince).getTime()) / (1000 * 60 * 60 * 24))
         : 30;
       const waitBonus = Math.min(5, Math.round(daysWaiting / 60));
 
-      // Weighted Composite Compatibility Score:
-      // HLA: 40%, Blood (compatible): 20%, Urgency: 25%, Distance: 15%
       const compositeScore = Math.min(
         99,
         Math.round(
@@ -159,7 +196,7 @@ export function findMatchesForListing(
         viabilityFeasible
       };
 
-      candidates.push({
+      rawCandidates.push({
         recipientListing: rec,
         compatibilityScore: compositeScore,
         distanceKm: distance,
@@ -169,20 +206,36 @@ export function findMatchesForListing(
       });
     }
 
-    // Sort by compatibility score descending, then urgency
-    candidates.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
-    candidates.forEach((c, idx) => {
+    // Deduplicate candidates by recipient ID AND content signature
+    const seenRecIds = new Set<string>();
+    const seenContentKeys = new Set<string>();
+    const finalCandidates: MatchCandidate[] = [];
+    for (const c of rawCandidates) {
+      const rec = c.recipientListing;
+      const contentKey = `${(rec.hospitalName || '').toLowerCase().trim()}_${rec.organType}_${rec.bloodType}_${rec.donorAge || rec.recipientAge || ''}_${rec.donorGender || rec.recipientGender || ''}`;
+      if (!seenRecIds.has(rec.id) && !seenContentKeys.has(contentKey)) {
+        seenRecIds.add(rec.id);
+        seenContentKeys.add(contentKey);
+        finalCandidates.push(c);
+      }
+    }
+
+    finalCandidates.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+    finalCandidates.forEach((c, idx) => {
       c.rank = idx + 1;
     });
 
-    return candidates;
+    return finalCandidates;
   } else {
     // If target is Recipient, find Donor candidates
-    const donors = allListings.filter(
-      l => l.type === 'DONOR' && l.organType === targetListing.organType && l.status === 'ACTIVE'
+    const donors = deduplicatedListings.filter(
+      l => l.type === 'DONOR' &&
+           normalizeOrgan(l.organType) === targetOrganNorm &&
+           isActiveStatus(l.status) &&
+           l.id !== targetListing.id
     );
 
-    const candidates: MatchCandidate[] = [];
+    const rawCandidates: MatchCandidate[] = [];
 
     for (const donor of donors) {
       const bloodCompat = isBloodCompatible(donor.bloodType, targetListing.bloodType);
@@ -214,8 +267,8 @@ export function findMatchesForListing(
         )
       );
 
-      candidates.push({
-        recipientListing: targetListing,
+      rawCandidates.push({
+        recipientListing: donor, // Matching donor organ listing
         compatibilityScore: compositeScore,
         distanceKm: distance,
         estimatedTransitMinutes: transitMin,
@@ -230,11 +283,25 @@ export function findMatchesForListing(
       });
     }
 
-    candidates.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
-    candidates.forEach((c, idx) => {
+    // Deduplicate candidates by donor ID AND content signature
+    const seenDonorIds = new Set<string>();
+    const seenContentKeys = new Set<string>();
+    const finalCandidates: MatchCandidate[] = [];
+    for (const c of rawCandidates) {
+      const donor = c.recipientListing;
+      const contentKey = `${(donor.hospitalName || '').toLowerCase().trim()}_${donor.organType}_${donor.bloodType}_${donor.donorAge || donor.recipientAge || ''}_${donor.donorGender || donor.recipientGender || ''}`;
+      if (!seenDonorIds.has(donor.id) && !seenContentKeys.has(contentKey)) {
+        seenDonorIds.add(donor.id);
+        seenContentKeys.add(contentKey);
+        finalCandidates.push(c);
+      }
+    }
+
+    finalCandidates.sort((a, b) => b.compatibilityScore - a.compatibilityScore);
+    finalCandidates.forEach((c, idx) => {
       c.rank = idx + 1;
     });
 
-    return candidates;
+    return finalCandidates;
   }
 }

@@ -247,9 +247,9 @@ export default function MatchResultsPage({ params }: { params: Promise<{ id: str
                         </div>
 
                         <h3 className="text-lg font-semibold text-on-surface flex items-center gap-2">
-                          <span>Patient #{rec.recipientPatientId}</span>
+                          <span>{isDonor ? `Patient #${rec.recipientPatientId}` : `Donor Organ #${rec.id}`}</span>
                           <span className="text-xs font-normal text-on-surface-variant">
-                            • Age {rec.recipientAge || '40'}y ({rec.recipientGender || 'F'}) • {rec.medicalCenterWard || 'Cardiology Unit'}
+                            • Age {isDonor ? rec.recipientAge || '40' : rec.donorAge || '35'}y ({isDonor ? rec.recipientGender || 'F' : rec.donorGender || 'M'}) • {rec.hospitalName}
                           </span>
                         </h3>
 

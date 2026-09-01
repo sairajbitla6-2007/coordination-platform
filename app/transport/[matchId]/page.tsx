@@ -51,24 +51,18 @@ export default function TransportTrackingPage({ params }: { params: Promise<{ ma
   // Recipient view is true if current hospital is recipient center OR if user is NOT the donor center
   const isRecipientView = isRecipientCenter || (!isDonorCenter && currentRole !== 'ADMIN');
 
-  const stepMap: Record<string, number> = {
+  const currentStepIndex = {
     PENDING: 0,
     DISPATCHED: 1,
     IN_TRANSIT: 2,
     DELIVERED: 3
-  };
-  const currentStepIndex = stepMap[transport.status] ?? 0;
+  }[transport.status] ?? 0;
 
   const handleAdvance = (next: TransportStatus) => {
     setIsUpdating(true);
     setTimeout(() => {
       advanceTransportStatus(transport.matchId, next);
       setIsUpdating(false);
-      if (next === 'DELIVERED') {
-        setTimeout(() => {
-          router.push('/history');
-        }, 1200);
-      }
     }, 400);
   };
 
@@ -571,7 +565,7 @@ export default function TransportTrackingPage({ params }: { params: Promise<{ ma
                     <button
                       onClick={() => handleAdvance('DISPATCHED')}
                       disabled={isUpdating}
-                      className="w-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
+                      className="w-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">inventory</span>
                       Sign-Off & Dispatch Organ
@@ -582,7 +576,7 @@ export default function TransportTrackingPage({ params }: { params: Promise<{ ma
                     <button
                       onClick={() => handleAdvance('IN_TRANSIT')}
                       disabled={isUpdating}
-                      className="w-full bg-secondary hover:bg-secondary/90 text-on-secondary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
+                      className="w-full bg-secondary hover:bg-secondary/90 text-on-secondary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">local_shipping</span>
                       Confirm In Transit (Highway)
@@ -593,7 +587,7 @@ export default function TransportTrackingPage({ params }: { params: Promise<{ ma
                     <button
                       onClick={() => handleAdvance('DELIVERED')}
                       disabled={isUpdating}
-                      className="w-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2"
+                      className="w-full bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs py-3 px-4 rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                     >
                       <span className="material-symbols-outlined text-[18px]">done_all</span>
                       Confirm Delivery & OT Receipt
