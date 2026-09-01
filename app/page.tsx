@@ -7,7 +7,7 @@ import { usePlatform, JWT_KEY, STORAGE_KEY } from '@/lib/context/PlatformContext
 
 export default function RootHomePage() {
   const router = useRouter();
-  const { currentRole, setCurrentRole, setCurrentHospitalId, showToast } = usePlatform();
+  const { currentRole, setCurrentRole, setCurrentHospitalId, hospitals, showToast } = usePlatform();
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -30,6 +30,38 @@ export default function RootHomePage() {
     }
   }, [currentRole, router]);
 
+  const resolveHospitalForEmail = (cleanEmail: string) => {
+    // 1. Exact match on contact email
+    const exact = hospitals.find(h => h.adminContact?.email?.toLowerCase().trim() === cleanEmail);
+    if (exact) return exact;
+
+    // 2. Built-in keywords
+    if (cleanEmail.includes('stjude') || cleanEmail.includes('jude') || cleanEmail.includes('cardiac')) {
+      const found = hospitals.find(h => h.id === 'hosp-st-jude');
+      if (found) return found;
+    }
+    if (cleanEmail.includes('apex') || cleanEmail.includes('heart')) {
+      const found = hospitals.find(h => h.id === 'hosp-apex');
+      if (found) return found;
+    }
+    if (cleanEmail.includes('city') || cleanEmail.includes('care')) {
+      const found = hospitals.find(h => h.id === 'hosp-city-care');
+      if (found) return found;
+    }
+    if (cleanEmail.includes('metro') || cleanEmail.includes('general')) {
+      const found = hospitals.find(h => h.id === 'hosp-metro-gen');
+      if (found) return found;
+    }
+
+    // 3. Partial match on hospital name or email username
+    const username = cleanEmail.split('@')[0];
+    const partial = hospitals.find(h => h.name.toLowerCase().includes(username) || h.adminContact?.email?.toLowerCase().includes(username));
+    if (partial) return partial;
+
+    // 4. Return newest hospital or default
+    return hospitals[hospitals.length - 1] || hospitals[0];
+  };
+
   const doFallbackLogin = (emailVal: string, passwordVal: string) => {
     const cleanEmail = emailVal.toLowerCase().trim();
     const isAdmin =
@@ -44,10 +76,20 @@ export default function RootHomePage() {
       router.push('/admin/queue');
     } else {
       setCurrentRole('HOSPITAL_USER');
-      setCurrentHospitalId('hosp-metro-gen');
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: 'hosp-metro-gen' }));
-      showToast({ type: 'success', title: 'Welcome, Hospital Coordinator', message: 'Hospital Portal Authenticated Successfully.' });
-      router.push('/dashboard');
+      const matchedHosp = resolveHospitalForEmail(cleanEmail);
+      const targetHospId = matchedHosp ? matchedHosp.id : 'hosp-metro-gen';
+      setCurrentHospitalId(targetHospId);
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: targetHospId }));
+      showToast({ type: 'success', title: `Welcome, ${matchedHosp?.adminContact?.name || 'Coordinator'}`, message: `Logged in to ${matchedHosp?.name || 'Hospital Portal'}.` });
+
+      if (matchedHosp?.status === 'PENDING_REVIEW') {
+        router.push('/pending-review');
+      } else if (matchedHosp?.status === 'REJECTED') {
+        router.push('/rejected');
+      } else {
+        router.push('/dashboard');
+      }
     }
   };
 
