@@ -29,7 +29,7 @@ export default function RoleGuard({
     );
   }
 
-  // If page requires Admin and current user is Hospital User
+  // If page requires Admin and current user is Hospital User or unauthenticated
   if (requiredRole === 'ADMIN' && currentRole !== 'ADMIN') {
     return (
       <div className="max-w-xl mx-auto my-12 p-8 bg-surface-container rounded-2xl border border-outline-variant/30 text-center shadow-sm">
@@ -38,12 +38,18 @@ export default function RoleGuard({
         <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
           Access to the National Accreditation Queue & Governance Desk requires Administrator credentials.
         </p>
-        <div className="flex justify-center gap-3">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
+          <Link
+            href="/"
+            className="w-full sm:w-auto bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs px-6 py-2.5 rounded-full shadow-xs transition-all inline-flex items-center justify-center gap-2"
+          >
+            <span className="material-symbols-outlined text-[18px]">lock</span> Sign In with Admin Credentials
+          </Link>
           <Link
             href="/dashboard"
-            className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm px-6 py-2.5 rounded-full shadow-xs transition-all inline-flex items-center gap-2"
+            className="w-full sm:w-auto bg-surface-container-high hover:bg-surface-dim text-on-surface font-semibold text-xs px-6 py-2.5 rounded-full transition-all inline-flex items-center justify-center gap-2 border border-outline-variant/40"
           >
-            <span className="material-symbols-outlined text-[18px]">dashboard</span> Return to Hospital Dashboard
+            <span className="material-symbols-outlined text-[18px]">dashboard</span> Hospital Dashboard
           </Link>
         </div>
       </div>
@@ -59,12 +65,18 @@ export default function RoleGuard({
         <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
           You are currently logged in as a National Governance Administrator. Please use your Verification Queue desk to inspect and accredit registered hospitals.
         </p>
-        <div className="flex justify-center gap-3">
+        <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
           <Link
             href="/admin/queue"
-            className="bg-primary hover:bg-primary-container text-on-primary font-semibold text-sm px-6 py-2.5 rounded-full transition-all inline-flex items-center gap-2"
+            className="w-full sm:w-auto bg-primary hover:bg-primary-container text-on-primary font-semibold text-xs px-6 py-2.5 rounded-full transition-all inline-flex items-center justify-center gap-2"
           >
             <span className="material-symbols-outlined text-[18px]">how_to_reg</span> Open Verification Queue
+          </Link>
+          <Link
+            href="/"
+            className="w-full sm:w-auto bg-surface-container-high hover:bg-surface-dim text-on-surface font-semibold text-xs px-6 py-2.5 rounded-full transition-all inline-flex items-center justify-center gap-2 border border-outline-variant/40"
+          >
+            <span className="material-symbols-outlined text-[18px]">logout</span> Switch Account / Sign In
           </Link>
         </div>
       </div>
@@ -78,15 +90,23 @@ export default function RoleGuard({
         <div className="max-w-md mx-auto my-16 p-8 bg-surface-container-lowest rounded-2xl border border-outline-variant/30 text-center shadow-sm">
           <span className="material-symbols-outlined text-outline text-[48px] mb-3">domain_disabled</span>
           <h2 className="text-xl font-semibold mb-2">No Hospital Associated</h2>
-          <p className="text-on-surface-variant text-sm mb-6">
-            Please register your hospital account to access organ matching features.
+          <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
+            Please sign in to your verified hospital coordinator account or register a new hospital application.
           </p>
-          <Link
-            href="/register"
-            className="bg-primary text-on-primary font-semibold text-sm px-6 py-2.5 rounded-full inline-block"
-          >
-            Register Hospital Application
-          </Link>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-3">
+            <Link
+              href="/"
+              className="w-full sm:w-auto bg-primary text-on-primary font-semibold text-xs px-6 py-2.5 rounded-full inline-flex items-center justify-center gap-1.5 shadow-xs"
+            >
+              <span className="material-symbols-outlined text-[16px]">login</span> Sign In to Account
+            </Link>
+            <Link
+              href="/register"
+              className="w-full sm:w-auto bg-surface-container-high hover:bg-surface-dim text-on-surface font-semibold text-xs px-6 py-2.5 rounded-full inline-flex items-center justify-center gap-1.5 border border-outline-variant/40"
+            >
+              <span className="material-symbols-outlined text-[16px]">domain_add</span> Register Hospital
+            </Link>
+          </div>
         </div>
       );
     }
