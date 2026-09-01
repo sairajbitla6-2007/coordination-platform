@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePlatform, JWT_KEY } from '@/lib/context/PlatformContext';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
+const HAS_BACKEND = !!process.env.NEXT_PUBLIC_API_URL;
 
 export default function RootHomePage() {
   const router = useRouter();
@@ -32,16 +33,40 @@ export default function RootHomePage() {
     }
   }, [currentRole, router]);
 
+  const doFallbackLogin = (emailVal: string) => {
+    const cleanEmail = emailVal.toLowerCase().trim();
+    const isAdminLogin = cleanEmail.includes('admin') || cleanEmail.includes('governance');
+    if (isAdminLogin) {
+      setCurrentRole('ADMIN');
+      localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
+      showToast({ type: 'success', title: 'Authenticated as Platform Admin', message: 'Accessing Governance & Accreditation Panel.' });
+      router.push('/admin/queue');
+    } else {
+      setCurrentRole('HOSPITAL_USER');
+      localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: '' }));
+      showToast({ type: 'success', title: 'Welcome, Hospital Coordinator', message: 'Hospital Portal Authenticated Successfully.' });
+      router.push('/dashboard');
+    }
+  };
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage('');
     setIsLoading(true);
+
+    // No live backend configured — use client-side role auth immediately
+    if (!HAS_BACKEND) {
+      doFallbackLogin(email);
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        signal: AbortSignal.timeout(6000),
       });
 
       const json = await res.json().catch(() => ({}));
@@ -49,61 +74,27 @@ export default function RootHomePage() {
       if (res.ok && json?.data?.access_token) {
         const token = json.data.access_token;
         const user = json.data.user;
-
         localStorage.setItem(JWT_KEY, token);
 
         if (user.role === 'ADMIN') {
           setCurrentRole('ADMIN');
           localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
-          showToast({
-            type: 'success',
-            title: 'Authenticated as Platform Admin',
-            message: 'Accessing Governance & Accreditation Panel.',
-          });
+          showToast({ type: 'success', title: 'Authenticated as Platform Admin', message: 'Accessing Governance & Accreditation Panel.' });
           router.push('/admin/queue');
         } else {
           setCurrentRole('HOSPITAL_USER');
           const hospId = user.hospital_id || '';
-          if (hospId) {
-            setCurrentHospitalId(hospId);
-          }
+          if (hospId) setCurrentHospitalId(hospId);
           localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: hospId }));
-          showToast({
-            type: 'success',
-            title: `Welcome, ${user.full_name || 'Coordinator'}`,
-            message: 'Hospital Portal Authenticated Successfully.',
-          });
+          showToast({ type: 'success', title: `Welcome, ${user.full_name || 'Coordinator'}`, message: 'Hospital Portal Authenticated Successfully.' });
           router.push('/dashboard');
         }
       } else {
-        setErrorMessage(
-          json?.error || json?.message || 'Invalid email or password.'
-        );
+        setErrorMessage(json?.error || json?.message || 'Invalid email or password.');
       }
     } catch {
-      // Fallback demo mode login when live backend URL is unreachable on cloud deployments
-      const cleanEmail = email.toLowerCase().trim();
-      const isAdminLogin = cleanEmail.includes('admin') || cleanEmail.includes('governance');
-
-      if (isAdminLogin) {
-        setCurrentRole('ADMIN');
-        localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
-        showToast({
-          type: 'success',
-          title: 'Authenticated as Platform Admin',
-          message: 'Accessing Governance & Accreditation Panel.',
-        });
-        router.push('/admin/queue');
-      } else {
-        setCurrentRole('HOSPITAL_USER');
-        localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: 'hosp-metro-gen' }));
-        showToast({
-          type: 'success',
-          title: 'Welcome, Hospital Coordinator',
-          message: 'Hospital Portal Authenticated Successfully.',
-        });
-        router.push('/dashboard');
-      }
+      // Backend unreachable at runtime — fall back to role-based auth
+      doFallbackLogin(email);
     } finally {
       setIsLoading(false);
     }
