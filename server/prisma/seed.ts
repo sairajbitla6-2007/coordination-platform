@@ -4,20 +4,19 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('🌱 Starting Node.js / Prisma Database Seeding...');
+  console.log('🌱 Starting Node.js / Prisma Database Seeding (upsert-safe)...');
 
   // Hash passwords
   const adminPasswordHash = await bcrypt.hash('AdminDemo@2024', 10);
   const metroPasswordHash = await bcrypt.hash('MetroDemo@2024', 10);
   const stjudePasswordHash = await bcrypt.hash('StJudeDemo@2024', 10);
   const apolloPasswordHash = await bcrypt.hash('ApolloDemo@2024', 10);
-  const citymedPasswordHash = await bcrypt.hash('CityMedDemo@2024', 10);
-  const hopePasswordHash = await bcrypt.hash('HopeDemo@2024', 10);
-  const sunrisePasswordHash = await bcrypt.hash('SunriseDemo@2024', 10);
 
-  // 1. Seed Hospitals
-  const metroGen = await prisma.hospital.create({
-    data: {
+  // 1. Upsert Hospitals
+  const metroGen = await prisma.hospital.upsert({
+    where: { id: '11111111-0001-0001-0001-000000000001' },
+    update: {},
+    create: {
       id: '11111111-0001-0001-0001-000000000001',
       name: 'Metro General Hospital & Trauma Center',
       registration_number: 'NOTTO-KA-2024-8841',
@@ -33,8 +32,10 @@ async function main() {
     },
   });
 
-  const stJude = await prisma.hospital.create({
-    data: {
+  const stJude = await prisma.hospital.upsert({
+    where: { id: '11111111-0002-0002-0002-000000000002' },
+    update: {},
+    create: {
       id: '11111111-0002-0002-0002-000000000002',
       name: 'St. Jude Heart & Lung Institute',
       registration_number: 'NOTTO-TN-2023-5592',
@@ -50,8 +51,10 @@ async function main() {
     },
   });
 
-  const apolloCare = await prisma.hospital.create({
-    data: {
+  const apolloCare = await prisma.hospital.upsert({
+    where: { id: '11111111-0003-0003-0003-000000000003' },
+    update: {},
+    create: {
       id: '11111111-0003-0003-0003-000000000003',
       name: 'Apollo Multi-Specialty Hospital',
       registration_number: 'NOTTO-KA-2024-9104',
@@ -67,8 +70,10 @@ async function main() {
     },
   });
 
-  const cityMed = await prisma.hospital.create({
-    data: {
+  const cityMed = await prisma.hospital.upsert({
+    where: { id: '11111111-0004-0004-0004-000000000004' },
+    update: {},
+    create: {
       id: '11111111-0004-0004-0004-000000000004',
       name: 'City Medical University Hospital',
       registration_number: 'NOTTO-TG-2023-1092',
@@ -84,8 +89,10 @@ async function main() {
     },
   });
 
-  const hopeCenter = await prisma.hospital.create({
-    data: {
+  await prisma.hospital.upsert({
+    where: { id: '11111111-0005-0005-0005-000000000005' },
+    update: {},
+    create: {
       id: '11111111-0005-0005-0005-000000000005',
       name: 'Hope Regional Specialty Hospital',
       registration_number: 'NOTTO-KA-2024-APPL-441',
@@ -101,8 +108,10 @@ async function main() {
     },
   });
 
-  const sunriseClinic = await prisma.hospital.create({
-    data: {
+  await prisma.hospital.upsert({
+    where: { id: '11111111-0006-0006-0006-000000000006' },
+    update: {},
+    create: {
       id: '11111111-0006-0006-0006-000000000006',
       name: 'Sunrise Community Healthcare Clinic',
       registration_number: 'NOTTO-KA-2024-APPL-019',
@@ -119,21 +128,30 @@ async function main() {
     },
   });
 
-  // 2. Seed Users
-  const adminUser = await prisma.user.create({
-    data: {
+  // 2. Upsert Users — Admin first (no hospital_id)
+  await prisma.user.upsert({
+    where: { email: 'admin@organlink.demo' },
+    update: {
+      password_hash: adminPasswordHash,
+      full_name: 'Platform Admin (Governance Desk)',
+      role: UserRole.ADMIN,
+    },
+    create: {
       id: '00000000-0000-0000-0000-000000000001',
       email: 'admin@organlink.demo',
       password_hash: adminPasswordHash,
-      full_name: 'Platform Admin (NOTTO Desk)',
+      full_name: 'Platform Admin (Governance Desk)',
       role: UserRole.ADMIN,
       hospital_id: null,
       preferences: { urgent_alerts: true, sound_alerts: true, digest: true },
     },
   });
+  console.log('✅ Admin user seeded: admin@organlink.demo / AdminDemo@2024 [role: ADMIN]');
 
-  const metroAdmin = await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email: 'priya.sharma@metrogeneral.med.in' },
+    update: { password_hash: metroPasswordHash },
+    create: {
       id: '00000000-0000-0000-0000-000000000002',
       email: 'priya.sharma@metrogeneral.med.in',
       password_hash: metroPasswordHash,
@@ -143,8 +161,10 @@ async function main() {
     },
   });
 
-  const stjudeAdmin = await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email: 'rajiv.menon@stjudeheart.org' },
+    update: { password_hash: stjudePasswordHash },
+    create: {
       id: '00000000-0000-0000-0000-000000000003',
       email: 'rajiv.menon@stjudeheart.org',
       password_hash: stjudePasswordHash,
@@ -154,8 +174,10 @@ async function main() {
     },
   });
 
-  const apolloAdmin = await prisma.user.create({
-    data: {
+  await prisma.user.upsert({
+    where: { email: 'ananya.ray@apollo.org' },
+    update: { password_hash: apolloPasswordHash },
+    create: {
       id: '00000000-0000-0000-0000-000000000004',
       email: 'ananya.ray@apollo.org',
       password_hash: apolloPasswordHash,
@@ -165,9 +187,11 @@ async function main() {
     },
   });
 
-  // 3. Seed Donor Organs
-  const organHeart = await prisma.organ.create({
-    data: {
+  // 3. Upsert Donor Organs
+  const organHeart = await prisma.organ.upsert({
+    where: { id: '22222222-0001-0001-0001-000000000001' },
+    update: {},
+    create: {
       id: '22222222-0001-0001-0001-000000000001',
       hospital_id: metroGen.id,
       donor_ref: 'L-DONOR-881',
@@ -184,8 +208,10 @@ async function main() {
     },
   });
 
-  const organKidney = await prisma.organ.create({
-    data: {
+  const organKidney = await prisma.organ.upsert({
+    where: { id: '22222222-0002-0002-0002-000000000002' },
+    update: {},
+    create: {
       id: '22222222-0002-0002-0002-000000000002',
       hospital_id: metroGen.id,
       donor_ref: 'L-DONOR-882',
@@ -202,9 +228,11 @@ async function main() {
     },
   });
 
-  // 4. Seed Recipients
-  const recipientHeart = await prisma.recipient.create({
-    data: {
+  // 4. Upsert Recipients
+  const recipientHeart = await prisma.recipient.upsert({
+    where: { id: '33333333-0001-0001-0001-000000000001' },
+    update: {},
+    create: {
       id: '33333333-0001-0001-0001-000000000001',
       hospital_id: stJude.id,
       patient_ref: 'PT-STJ-9941',
@@ -220,8 +248,10 @@ async function main() {
     },
   });
 
-  const recipientKidney = await prisma.recipient.create({
-    data: {
+  await prisma.recipient.upsert({
+    where: { id: '33333333-0002-0002-0002-000000000002' },
+    update: {},
+    create: {
       id: '33333333-0002-0002-0002-000000000002',
       hospital_id: apolloCare.id,
       patient_ref: 'PT-APL-4012',
@@ -237,9 +267,11 @@ async function main() {
     },
   });
 
-  // 5. Seed Confirmed Match & Active Transport
-  const confirmedMatch = await prisma.match.create({
-    data: {
+  // 5. Upsert Match & Transport
+  const confirmedMatch = await prisma.match.upsert({
+    where: { id: '44444444-0001-0001-0001-000000000001' },
+    update: {},
+    create: {
       id: '44444444-0001-0001-0001-000000000001',
       organ_id: organHeart.id,
       recipient_id: recipientHeart.id,
@@ -254,8 +286,10 @@ async function main() {
     },
   });
 
-  const transport = await prisma.transport.create({
-    data: {
+  await prisma.transport.upsert({
+    where: { id: '55555555-0001-0001-0001-000000000001' },
+    update: {},
+    create: {
       id: '55555555-0001-0001-0001-000000000001',
       match_id: confirmedMatch.id,
       status: TransportStatus.IN_TRANSIT,
@@ -279,28 +313,35 @@ async function main() {
     },
   });
 
-  // 6. Seed Notifications
-  await prisma.notification.createMany({
-    data: [
-      {
-        hospital_id: hopeCenter.id,
-        title: 'New Hospital Registration Submitted',
-        message: 'Hope Regional Specialty Hospital has submitted an application for NOTTO accreditation.',
-        notification_type: 'REGISTRATION_STATUS',
-        action_url: '/admin/queue',
-      },
-      {
-        hospital_id: stJude.id,
-        title: 'URGENT: Incoming Match Proposal - Heart (A+)',
-        message: 'Metro General Hospital proposed Heart for Patient PT-STJ-9941.',
-        notification_type: 'PROPOSAL_RECEIVED',
-        is_read: false,
-        action_url: '/requests',
-      },
-    ],
-  });
+  // 6. Notifications (skip if already exist)
+  const notifCount = await prisma.notification.count();
+  if (notifCount === 0) {
+    await prisma.notification.createMany({
+      data: [
+        {
+          hospital_id: '11111111-0005-0005-0005-000000000005',
+          title: 'New Hospital Registration Submitted',
+          message: 'Hope Regional Specialty Hospital has submitted an application for accreditation review.',
+          notification_type: 'REGISTRATION_STATUS',
+          action_url: '/admin/queue',
+        },
+        {
+          hospital_id: stJude.id,
+          title: 'URGENT: Incoming Match Proposal - Heart (A+)',
+          message: 'Metro General Hospital proposed Heart for Patient PT-STJ-9941.',
+          notification_type: 'PROPOSAL_RECEIVED',
+          is_read: false,
+          action_url: '/requests',
+        },
+      ],
+    });
+  }
 
   console.log('✅ PostgreSQL Database Seeding Complete!');
+  console.log('   Admin: admin@organlink.demo / AdminDemo@2024');
+  console.log('   Metro: priya.sharma@metrogeneral.med.in / MetroDemo@2024');
+  console.log('   Apollo: ananya.ray@apollo.org / ApolloDemo@2024');
+  console.log('   St Jude: rajiv.menon@stjudeheart.org / StJudeDemo@2024');
 }
 
 main()
