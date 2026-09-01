@@ -156,7 +156,7 @@ export default function Header() {
                 />
                 <span className="hidden sm:inline font-semibold truncate max-w-[130px] md:max-w-[180px]">
                   {currentRole === 'ADMIN'
-                    ? 'NOTTO Admin Desk'
+                    ? 'Admin Desk'
                     : currentHospital?.name ? currentHospital.name.split(' ')[0] + ' ' + (currentHospital.name.split(' ')[1] || '') : 'Hospital Portal'}
                 </span>
                 <span className="material-symbols-outlined text-[16px] text-on-surface-variant">arrow_drop_down</span>
@@ -171,7 +171,7 @@ export default function Header() {
                       Authenticated Session
                     </span>
                     <div className="text-xs font-semibold text-on-surface mt-0.5 truncate">
-                      {currentRole === 'ADMIN' ? 'NOTTO National Governance' : currentHospital?.name || 'Hospital Coordinator'}
+                      {currentRole === 'ADMIN' ? 'National Governance' : currentHospital?.name || 'Hospital Coordinator'}
                     </div>
                     <div className="text-[10px] text-on-surface-variant">
                       {currentRole === 'ADMIN' ? 'Role: Administrator' : `Status: ${currentHospital?.status || 'VERIFIED'}`}

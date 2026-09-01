@@ -9,13 +9,13 @@ export default function PendingReviewPage() {
   const router = useRouter();
   const { currentHospital, logout, showToast } = usePlatform();
 
-  // Auto-detect NOTTO Admin verification approval in real-time and transition to dashboard
+  // Auto-detect Admin verification approval in real-time and transition to dashboard
   useEffect(() => {
     if (currentHospital?.status === 'VERIFIED') {
       showToast({
         type: 'success',
         title: 'Accreditation Approved!',
-        message: 'NOTTO Administrator has verified your facility. Opening Hospital Coordination Portal...'
+        message: 'Administrator has verified your facility. Opening Hospital Coordination Portal...'
       });
       router.push('/dashboard');
     }
@@ -51,7 +51,7 @@ export default function PendingReviewPage() {
         </h1>
 
         <p className="text-xs sm:text-sm text-on-surface-variant mb-6 max-w-md leading-relaxed">
-          NOTTO compliance officers are currently verifying the credentials and OT accreditation for{' '}
+          Compliance officers are currently verifying the credentials and OT accreditation for{' '}
           <strong className="text-on-surface">{currentHospital?.name || 'your hospital'}</strong>.
         </p>
 
@@ -59,7 +59,7 @@ export default function PendingReviewPage() {
         <div className="w-full bg-surface-container-lowest rounded-2xl p-4 border border-outline-variant/30 text-left text-xs mb-8 space-y-2.5">
           <div className="flex justify-between items-center pb-2 border-b border-outline-variant/20">
             <span className="text-on-surface-variant font-medium">Application Reference:</span>
-            <span className="font-mono font-bold text-on-surface">{currentHospital?.licenseNumber || 'NOTTO-APPL-2026'}</span>
+            <span className="font-mono font-bold text-on-surface">{currentHospital?.licenseNumber || 'APPL-REG-2026'}</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-on-surface-variant font-medium">Transplant Lead:</span>

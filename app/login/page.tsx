@@ -42,7 +42,7 @@ export default function LoginPage() {
           showToast({
             type: 'success',
             title: 'Welcome Back, Admin',
-            message: 'Authenticated with NOTTO Governance Privileges.',
+            message: 'Authenticated with Administrator Governance Privileges.',
           });
           router.push('/admin/queue');
         } else {

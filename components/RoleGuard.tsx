@@ -34,9 +34,9 @@ export default function RoleGuard({
     return (
       <div className="max-w-xl mx-auto my-12 p-8 bg-surface-container rounded-2xl border border-outline-variant/30 text-center shadow-sm">
         <span className="material-symbols-outlined text-error text-[48px] mb-4">gpp_bad</span>
-        <h2 className="text-2xl font-semibold mb-2">NOTTO Admin Desk Restricted</h2>
+        <h2 className="text-2xl font-semibold mb-2">Admin Desk Restricted</h2>
         <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
-          Access to the National Accreditation Queue & Governance Desk requires NOTTO Administrator credentials.
+          Access to the National Accreditation Queue & Governance Desk requires Administrator credentials.
         </p>
         <div className="flex justify-center gap-3">
           <Link
@@ -55,7 +55,7 @@ export default function RoleGuard({
     return (
       <div className="max-w-xl mx-auto my-12 p-8 bg-surface-container rounded-2xl border border-outline-variant/30 text-center shadow-sm">
         <span className="material-symbols-outlined text-tertiary text-[48px] mb-4">admin_panel_settings</span>
-        <h2 className="text-2xl font-semibold mb-2">NOTTO Administrative Mode Active</h2>
+        <h2 className="text-2xl font-semibold mb-2">Administrative Governance Mode Active</h2>
         <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
           You are currently logged in as a National Governance Administrator. Please use your Verification Queue desk to inspect and accredit registered hospitals.
         </p>
@@ -102,7 +102,7 @@ export default function RoleGuard({
           </span>
           <h2 className="text-2xl font-semibold text-on-surface mb-2">{currentHospital.name}</h2>
           <p className="text-on-surface-variant text-sm mb-6 leading-relaxed">
-            Your hospital application is undergoing accreditation review by NOTTO compliance officers. Clinical matching and organ listings remain locked until approved.
+            Your hospital application is undergoing accreditation review by compliance officers. Clinical matching and organ listings remain locked until approved.
           </p>
           <div className="p-4 bg-surface-container-low rounded-xl border border-outline-variant/30 text-left text-xs mb-6 space-y-2">
             <div className="flex justify-between">

@@ -7,41 +7,6 @@ import { usePlatform, JWT_KEY } from '@/lib/context/PlatformContext';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
-const DEMO_PRESETS = [
-  {
-    label: 'Metro General (Donor)',
-    email: 'priya.sharma@metrogeneral.med.in',
-    password: 'MetroDemo@2024',
-    role: 'HOSPITAL_USER' as const,
-    hospId: '11111111-0001-0001-0001-000000000001',
-    badge: 'Donor Center',
-  },
-  {
-    label: 'St. Jude (Recipient)',
-    email: 'rajiv.menon@stjudeheart.org',
-    password: 'StJudeDemo@2024',
-    role: 'HOSPITAL_USER' as const,
-    hospId: '11111111-0002-0002-0002-000000000002',
-    badge: 'Recipient Center',
-  },
-  {
-    label: 'Apollo Multi-Specialty',
-    email: 'ananya.ray@apollo.org',
-    password: 'ApolloDemo@2024',
-    role: 'HOSPITAL_USER' as const,
-    hospId: '11111111-0003-0003-0003-000000000003',
-    badge: 'Transplant Center',
-  },
-  {
-    label: 'NOTTO Admin Desk',
-    email: 'admin@organlink.demo',
-    password: 'AdminDemo@2024',
-    role: 'ADMIN' as const,
-    hospId: '',
-    badge: 'Governance',
-  },
-];
-
 export default function RootHomePage() {
   const router = useRouter();
   const { currentRole, setCurrentRole, setCurrentHospitalId, showToast } = usePlatform();
@@ -92,7 +57,7 @@ export default function RootHomePage() {
           localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
           showToast({
             type: 'success',
-            title: 'Authenticated as NOTTO Admin',
+            title: 'Authenticated as Platform Admin',
             message: 'Accessing Governance & Accreditation Panel.',
           });
           router.push('/admin/queue');
@@ -124,12 +89,6 @@ export default function RootHomePage() {
     }
   };
 
-  const applyPreset = (preset: (typeof DEMO_PRESETS)[0]) => {
-    setEmail(preset.email);
-    setPassword(preset.password);
-    setErrorMessage('');
-  };
-
   if (isCheckingAuth) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center">
@@ -154,7 +113,7 @@ export default function RootHomePage() {
           </div>
           <h1 className="text-2xl font-bold text-on-surface tracking-tight">OrganLink Authentication</h1>
           <p className="text-xs text-on-surface-variant mt-1.5 leading-relaxed">
-            Sign in to access your Hospital Coordinator Portal or NOTTO Admin Governance Desk.
+            Sign in to access your Hospital Coordinator Portal or Governance Desk.
           </p>
         </div>
 
@@ -183,7 +142,7 @@ export default function RootHomePage() {
                 required
                 value={email}
                 onChange={e => setEmail(e.target.value)}
-                placeholder="coordinator@hospital.org or admin@organlink.demo"
+                placeholder="coordinator@hospital.org"
                 className="w-full pl-10 pr-4 py-2.5 text-xs bg-surface-container border border-outline-variant/40 rounded-xl text-on-surface placeholder:text-on-surface-variant/60 focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all"
               />
             </div>

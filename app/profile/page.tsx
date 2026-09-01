@@ -130,7 +130,7 @@ export default function HospitalProfilePage() {
           </Link>
           <span>/</span>
           <span className="text-on-surface font-semibold">
-            {isAdmin ? 'NOTTO Administrator Profile' : 'Hospital Profile & Settings'}
+            {isAdmin ? 'Administrator Profile' : 'Hospital Profile & Settings'}
           </span>
         </div>
 
@@ -157,15 +157,15 @@ export default function HospitalProfilePage() {
           </div>
 
           <h1 className="text-2xl sm:text-3xl font-bold text-on-surface tracking-tight">
-            {isAdmin ? 'Platform Admin (NOTTO Desk)' : currentHospital?.name || 'Registered Facility'}
+            {isAdmin ? 'Platform Admin (Governance Desk)' : currentHospital?.name || 'Registered Facility'}
           </h1>
 
           <p className="text-xs sm:text-sm text-on-surface-variant flex items-center justify-center gap-1.5 mt-1">
             <span className="material-symbols-outlined text-primary text-[18px]">verified</span>
             <span>
               {isAdmin
-                ? 'NOTTO National Governance & Accreditation Desk'
-                : `NOTTO Verified Center • Reg #${currentHospital?.licenseNumber || 'NOTTO-REG-2026'}`}
+                ? 'National Governance & Accreditation Desk'
+                : `Verified Center • Reg #${currentHospital?.licenseNumber || 'REG-2026'}`}
             </span>
           </p>
 
@@ -199,7 +199,7 @@ export default function HospitalProfilePage() {
                 {isAdmin ? 'Official Email' : 'Registration Number'}
               </span>
               <span className="text-sm font-mono font-bold text-on-surface">
-                {isAdmin ? 'admin@organlink.demo' : currentHospital?.licenseNumber || 'NOTTO-REG-2026'}
+                {isAdmin ? 'admin@organlink.demo' : currentHospital?.licenseNumber || 'REG-2026'}
               </span>
             </div>
 
@@ -218,7 +218,7 @@ export default function HospitalProfilePage() {
               </span>
               <span className="text-xs font-medium text-on-surface">
                 {isAdmin
-                  ? 'National Organ & Tissue Transplant Organisation (NOTTO), Nirman Bhawan, New Delhi - 110011'
+                  ? 'National Organ Allocation Headquarters, Governance District, New Delhi - 110011'
                   : currentHospital
                   ? `${currentHospital.address}, ${currentHospital.city}, ${currentHospital.state} - ${currentHospital.pincode}`
                   : 'Medical Enclave District, Bengaluru, Karnataka - 560001'}
