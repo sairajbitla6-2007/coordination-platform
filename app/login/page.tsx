@@ -18,10 +18,13 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
 
-  const doFallbackLogin = (emailVal: string) => {
+  const doFallbackLogin = (emailVal: string, passwordVal: string) => {
     const cleanEmail = emailVal.toLowerCase().trim();
-    const isAdminLogin = cleanEmail.includes('admin') || cleanEmail.includes('governance');
-    if (isAdminLogin) {
+    const isAdmin =
+      (cleanEmail === 'admin@organlink.demo' && passwordVal === 'AdminDemo@2024') ||
+      cleanEmail.includes('admin') ||
+      cleanEmail.includes('governance');
+    if (isAdmin) {
       setCurrentRole('ADMIN');
       localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
       showToast({ type: 'success', title: 'Welcome Back, Admin', message: 'Authenticated with Administrator Governance Privileges.' });
@@ -41,7 +44,7 @@ export default function LoginPage() {
 
     // No live backend configured — use client-side role auth immediately
     if (!HAS_BACKEND) {
-      doFallbackLogin(email);
+      doFallbackLogin(email, password);
       setIsLoading(false);
       return;
     }
@@ -75,8 +78,7 @@ export default function LoginPage() {
         setErrorMessage(json?.error || json?.message || 'Invalid credentials or inactive hospital account.');
       }
     } catch {
-      // Backend unreachable at runtime — fall back to role-based auth
-      doFallbackLogin(email);
+      doFallbackLogin(email, password);
     } finally {
       setIsLoading(false);
     }

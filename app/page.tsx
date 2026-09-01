@@ -33,10 +33,15 @@ export default function RootHomePage() {
     }
   }, [currentRole, router]);
 
-  const doFallbackLogin = (emailVal: string) => {
+  const doFallbackLogin = (emailVal: string, passwordVal: string) => {
     const cleanEmail = emailVal.toLowerCase().trim();
-    const isAdminLogin = cleanEmail.includes('admin') || cleanEmail.includes('governance');
-    if (isAdminLogin) {
+    // Hardcoded admin credentials for demo/Vercel deployment
+    const isAdmin =
+      (cleanEmail === 'admin@organlink.demo' && passwordVal === 'AdminDemo@2024') ||
+      cleanEmail.includes('admin') ||
+      cleanEmail.includes('governance');
+
+    if (isAdmin) {
       setCurrentRole('ADMIN');
       localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
       showToast({ type: 'success', title: 'Authenticated as Platform Admin', message: 'Accessing Governance & Accreditation Panel.' });
@@ -56,7 +61,7 @@ export default function RootHomePage() {
 
     // No live backend configured — use client-side role auth immediately
     if (!HAS_BACKEND) {
-      doFallbackLogin(email);
+      doFallbackLogin(email, password);
       setIsLoading(false);
       return;
     }
@@ -94,7 +99,7 @@ export default function RootHomePage() {
       }
     } catch {
       // Backend unreachable at runtime — fall back to role-based auth
-      doFallbackLogin(email);
+      doFallbackLogin(email, password);
     } finally {
       setIsLoading(false);
     }
