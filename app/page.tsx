@@ -5,9 +5,6 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePlatform, JWT_KEY } from '@/lib/context/PlatformContext';
 
-// NEXT_PUBLIC_ vars are baked at build time — fallback to empty means no backend
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
-
 export default function RootHomePage() {
   const router = useRouter();
   const { currentRole, setCurrentRole, setCurrentHospitalId, showToast } = usePlatform();
@@ -47,7 +44,8 @@ export default function RootHomePage() {
       router.push('/admin/queue');
     } else {
       setCurrentRole('HOSPITAL_USER');
-      localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: '' }));
+      setCurrentHospitalId('hosp-metro-gen');
+      localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: 'hosp-metro-gen' }));
       showToast({ type: 'success', title: 'Welcome, Hospital Coordinator', message: 'Hospital Portal Authenticated Successfully.' });
       router.push('/dashboard');
     }
@@ -58,24 +56,24 @@ export default function RootHomePage() {
     setErrorMessage('');
     setIsLoading(true);
 
-    // No backend URL configured (Vercel demo mode) — skip fetch entirely
-    if (!API_BASE) {
+    const isLocalhostDomain = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+
+    // On Vercel cloud domain or when local Express is unreachable, execute fallback login directly
+    const isCloudWithoutBackend = !isLocalhostDomain && (!apiUrl || apiUrl.includes('localhost') || apiUrl.includes('127.0.0.1'));
+
+    if (isCloudWithoutBackend || !apiUrl) {
       doFallbackLogin(email, password);
       setIsLoading(false);
       return;
     }
 
     try {
-      const controller = new AbortController();
-      const tid = setTimeout(() => controller.abort(), 5000);
-
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const res = await fetch(`${apiUrl}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-        signal: controller.signal,
       });
-      clearTimeout(tid);
 
       const json = await res.json().catch(() => ({}));
 
@@ -91,17 +89,16 @@ export default function RootHomePage() {
           router.push('/admin/queue');
         } else {
           setCurrentRole('HOSPITAL_USER');
-          const hospId = user.hospital_id || '';
-          if (hospId) setCurrentHospitalId(hospId);
+          const hospId = user.hospital_id || 'hosp-metro-gen';
+          setCurrentHospitalId(hospId);
           localStorage.setItem('lifelink_platform_state_v1', JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: hospId }));
           showToast({ type: 'success', title: `Welcome, ${user.full_name || 'Coordinator'}`, message: 'Hospital Portal Authenticated Successfully.' });
           router.push('/dashboard');
         }
       } else {
-        setErrorMessage(json?.error || json?.message || 'Invalid email or password.');
+        doFallbackLogin(email, password);
       }
     } catch {
-      // Backend unreachable (timeout / network error) — fallback
       doFallbackLogin(email, password);
     } finally {
       setIsLoading(false);
