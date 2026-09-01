@@ -794,8 +794,19 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      // Demo fallback
-      setHospitals(prev => prev.map(h => h.id === hospitalId ? { ...h, status: 'VERIFIED' as const, verifiedAt: new Date().toISOString() } : h));
+      // Demo fallback - update hospitals state and persist directly to localStorage for instant cross-tab sync
+      setHospitals(prev => {
+        const nextHospitals = prev.map(h => h.id === hospitalId ? { ...h, status: 'VERIFIED' as const, verifiedAt: new Date().toISOString() } : h);
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          const parsed = saved ? JSON.parse(saved) : {};
+          parsed.hospitals = nextHospitals;
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        } catch (e) {
+          console.warn('Failed to sync approved hospital to localStorage', e);
+        }
+        return nextHospitals;
+      });
       showToast({ type: 'success', title: 'Hospital Approved', message: `${targetHospital?.name || 'Hospital'} has been verified.` });
       setNotifications(prev => [{ id: 'notif-' + Date.now(), hospitalId, title: 'Hospital Registration Approved', message: 'Congratulations! Your hospital accreditation is verified.', type: 'REGISTRATION_STATUS', timestamp: new Date().toISOString(), read: false, link: '/dashboard' }, ...prev]);
     },
