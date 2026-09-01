@@ -769,11 +769,22 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         documents: data.documents || [],
         status: 'PENDING_REVIEW',
       };
-      setHospitals(prev => [...prev, newHospital]);
+      setHospitals(prev => {
+        const next = [...prev, newHospital];
+        try {
+          const saved = localStorage.getItem(STORAGE_KEY);
+          const parsed = saved ? JSON.parse(saved) : {};
+          parsed.hospitals = next;
+          parsed.currentHospitalId = newId;
+          parsed.currentRole = 'HOSPITAL_USER';
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+        } catch {}
+        return next;
+      });
       setCurrentHospitalId(newId);
       setCurrentRole('HOSPITAL_USER');
-      setNotifications(prev => [{ id: 'notif-' + Date.now(), targetRole: 'ADMIN', title: 'New Hospital Registration Pending', message: `${newHospital.name} has submitted an application for NOTTO accreditation.`, type: 'REGISTRATION_STATUS', timestamp: new Date().toISOString(), read: false, link: '/admin/queue' }, ...prev]);
-      showToast({ type: 'info', title: 'Registration Submitted', message: 'Your application is under review by the NOTTO admin team.' });
+      setNotifications(prev => [{ id: 'notif-' + Date.now(), targetRole: 'ADMIN', title: 'New Hospital Registration Pending', message: `${newHospital.name} has submitted an application for accreditation review.`, type: 'REGISTRATION_STATUS', timestamp: new Date().toISOString(), read: false, link: '/admin/queue' }, ...prev]);
+      showToast({ type: 'info', title: 'Registration Submitted', message: 'Your application is under review by compliance officers.' });
       return newHospital;
     },
     [fetchHospitals, fetchNotifications, showToast]

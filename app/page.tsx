@@ -71,7 +71,13 @@ export default function RootHomePage() {
 
     if (isAdmin) {
       setCurrentRole('ADMIN');
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const parsed = saved ? JSON.parse(saved) : {};
+        parsed.currentRole = 'ADMIN';
+        parsed.currentHospitalId = '';
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      } catch {}
       showToast({ type: 'success', title: 'Authenticated as Platform Admin', message: 'Accessing Governance & Accreditation Panel.' });
       router.push('/admin/queue');
     } else {
@@ -80,7 +86,14 @@ export default function RootHomePage() {
       const targetHospId = matchedHosp ? matchedHosp.id : 'hosp-metro-gen';
       setCurrentHospitalId(targetHospId);
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: targetHospId }));
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const parsed = saved ? JSON.parse(saved) : {};
+        parsed.currentRole = 'HOSPITAL_USER';
+        parsed.currentHospitalId = targetHospId;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      } catch {}
+
       showToast({ type: 'success', title: `Welcome, ${matchedHosp?.adminContact?.name || 'Coordinator'}`, message: `Logged in to ${matchedHosp?.name || 'Hospital Portal'}.` });
 
       if (matchedHosp?.status === 'PENDING_REVIEW') {

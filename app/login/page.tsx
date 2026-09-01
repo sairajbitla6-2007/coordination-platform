@@ -56,7 +56,13 @@ export default function LoginPage() {
 
     if (isAdmin) {
       setCurrentRole('ADMIN');
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'ADMIN', currentHospitalId: '' }));
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const parsed = saved ? JSON.parse(saved) : {};
+        parsed.currentRole = 'ADMIN';
+        parsed.currentHospitalId = '';
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      } catch {}
       showToast({ type: 'success', title: 'Welcome Back, Admin', message: 'Authenticated with Administrator Governance Privileges.' });
       router.push('/admin/queue');
     } else {
@@ -65,7 +71,14 @@ export default function LoginPage() {
       const targetHospId = matchedHosp ? matchedHosp.id : 'hosp-metro-gen';
       setCurrentHospitalId(targetHospId);
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ currentRole: 'HOSPITAL_USER', currentHospitalId: targetHospId }));
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        const parsed = saved ? JSON.parse(saved) : {};
+        parsed.currentRole = 'HOSPITAL_USER';
+        parsed.currentHospitalId = targetHospId;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(parsed));
+      } catch {}
+
       showToast({ type: 'success', title: `Welcome, ${matchedHosp?.adminContact?.name || 'Coordinator'}`, message: `Authenticated as ${matchedHosp?.name || 'Hospital Staff'}.` });
 
       if (matchedHosp?.status === 'PENDING_REVIEW') {
