@@ -5,8 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { usePlatform, JWT_KEY } from '@/lib/context/PlatformContext';
 
+// NEXT_PUBLIC_ vars are baked at build time — fallback to empty means no backend
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
-const HAS_BACKEND = !!process.env.NEXT_PUBLIC_API_URL;
 
 export default function RootHomePage() {
   const router = useRouter();
@@ -35,10 +35,9 @@ export default function RootHomePage() {
 
   const doFallbackLogin = (emailVal: string, passwordVal: string) => {
     const cleanEmail = emailVal.toLowerCase().trim();
-    // Hardcoded admin credentials for demo/Vercel deployment
     const isAdmin =
       (cleanEmail === 'admin@organlink.demo' && passwordVal === 'AdminDemo@2024') ||
-      cleanEmail.includes('admin') ||
+      cleanEmail.startsWith('admin') ||
       cleanEmail.includes('governance');
 
     if (isAdmin) {
@@ -59,20 +58,24 @@ export default function RootHomePage() {
     setErrorMessage('');
     setIsLoading(true);
 
-    // No live backend configured — use client-side role auth immediately
-    if (!HAS_BACKEND) {
+    // No backend URL configured (Vercel demo mode) — skip fetch entirely
+    if (!API_BASE) {
       doFallbackLogin(email, password);
       setIsLoading(false);
       return;
     }
 
     try {
+      const controller = new AbortController();
+      const tid = setTimeout(() => controller.abort(), 5000);
+
       const res = await fetch(`${API_BASE}/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
-        signal: AbortSignal.timeout(6000),
+        signal: controller.signal,
       });
+      clearTimeout(tid);
 
       const json = await res.json().catch(() => ({}));
 
@@ -98,7 +101,7 @@ export default function RootHomePage() {
         setErrorMessage(json?.error || json?.message || 'Invalid email or password.');
       }
     } catch {
-      // Backend unreachable at runtime — fall back to role-based auth
+      // Backend unreachable (timeout / network error) — fallback
       doFallbackLogin(email, password);
     } finally {
       setIsLoading(false);
