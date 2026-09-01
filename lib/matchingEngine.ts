@@ -206,12 +206,16 @@ export function findMatchesForListing(
       });
     }
 
-    // Deduplicate candidates by recipient ID
+    // Deduplicate candidates by recipient ID AND content signature
     const seenRecIds = new Set<string>();
+    const seenContentKeys = new Set<string>();
     const finalCandidates: MatchCandidate[] = [];
     for (const c of rawCandidates) {
-      if (!seenRecIds.has(c.recipientListing.id)) {
-        seenRecIds.add(c.recipientListing.id);
+      const rec = c.recipientListing;
+      const contentKey = `${(rec.hospitalName || '').toLowerCase().trim()}_${rec.organType}_${rec.bloodType}_${rec.donorAge || rec.recipientAge || ''}_${rec.donorGender || rec.recipientGender || ''}`;
+      if (!seenRecIds.has(rec.id) && !seenContentKeys.has(contentKey)) {
+        seenRecIds.add(rec.id);
+        seenContentKeys.add(contentKey);
         finalCandidates.push(c);
       }
     }
@@ -279,12 +283,16 @@ export function findMatchesForListing(
       });
     }
 
-    // Deduplicate candidates by donor ID
+    // Deduplicate candidates by donor ID AND content signature
     const seenDonorIds = new Set<string>();
+    const seenContentKeys = new Set<string>();
     const finalCandidates: MatchCandidate[] = [];
     for (const c of rawCandidates) {
-      if (!seenDonorIds.has(c.recipientListing.id)) {
-        seenDonorIds.add(c.recipientListing.id);
+      const donor = c.recipientListing;
+      const contentKey = `${(donor.hospitalName || '').toLowerCase().trim()}_${donor.organType}_${donor.bloodType}_${donor.donorAge || donor.recipientAge || ''}_${donor.donorGender || donor.recipientGender || ''}`;
+      if (!seenDonorIds.has(donor.id) && !seenContentKeys.has(contentKey)) {
+        seenDonorIds.add(donor.id);
+        seenContentKeys.add(contentKey);
         finalCandidates.push(c);
       }
     }
