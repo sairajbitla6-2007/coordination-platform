@@ -9,7 +9,7 @@ import { TransportStatus } from '@/lib/types';
 
 export default function TransportTrackingPage({ params }: { params: Promise<{ matchId: string }> }) {
   const { matchId } = use(params);
-  const { transports, getTransportByMatchId, advanceTransportStatus, currentHospitalId } = usePlatform();
+  const { transports, getTransportByMatchId, advanceTransportStatus, currentHospitalId, currentHospital, currentRole } = usePlatform();
 
   const transport = getTransportByMatchId(matchId) || transports[0];
   const [isUpdating, setIsUpdating] = useState(false);
@@ -35,6 +35,21 @@ export default function TransportTrackingPage({ params }: { params: Promise<{ ma
   const match = transport.match;
   const donor = match.donorListing;
   const recipient = match.recipientListing;
+
+  const proposingHospitalId = match.proposingHospitalId || donor?.hospitalId;
+  const receivingHospitalId = match.receivingHospitalId || recipient?.hospitalId;
+
+  // Determine if the current logged-in hospital is the Recipient Center vs Donor Center
+  const isDonorCenter =
+    (Boolean(currentHospitalId) && currentHospitalId === proposingHospitalId) ||
+    (Boolean(currentHospital?.name) && Boolean(match.proposingHospitalName) && currentHospital?.name.toLowerCase().trim() === match.proposingHospitalName.toLowerCase().trim());
+
+  const isRecipientCenter =
+    (Boolean(currentHospitalId) && currentHospitalId === receivingHospitalId) ||
+    (Boolean(currentHospital?.name) && Boolean(match.receivingHospitalName) && currentHospital?.name.toLowerCase().trim() === match.receivingHospitalName.toLowerCase().trim());
+
+  // Recipient view is true if current hospital is recipient center OR if user is NOT the donor center
+  const isRecipientView = isRecipientCenter || (!isDonorCenter && currentRole !== 'ADMIN');
 
   const stepMap: Record<string, number> = {
     PENDING: 0,
