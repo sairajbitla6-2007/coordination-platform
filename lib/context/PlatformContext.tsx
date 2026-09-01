@@ -593,7 +593,29 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       }
     }, 5000);
 
-    return () => clearInterval(pollInterval);
+    // Cross-tab real-time sync for demo state updates (e.g. Admin approval in another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === STORAGE_KEY && e.newValue) {
+        try {
+          const parsed = JSON.parse(e.newValue);
+          if (parsed.hospitals && Array.isArray(parsed.hospitals)) {
+            setHospitals(parsed.hospitals);
+            hospitalsRef.current = parsed.hospitals;
+          }
+          if (parsed.listings && Array.isArray(parsed.listings)) setListings(parsed.listings);
+          if (parsed.matches && Array.isArray(parsed.matches)) setMatches(parsed.matches);
+          if (parsed.transports && Array.isArray(parsed.transports)) setTransports(parsed.transports);
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    };
+    window.addEventListener('storage', handleStorageChange);
+
+    return () => {
+      clearInterval(pollInterval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Save lightweight UI state to localStorage ───────────────────
